@@ -1,0 +1,58 @@
+{% extends "accounts/base.html" %}
+{% load session_tags %}
+{% block title %}ユーザ照会{% endblock %}
+{% block body %}
+<div class="app-shell">
+  <header class="topbar">
+    <a href="{% url 'game_list' %}" class="topbar-brand">🀄 MJS</a>
+    <nav class="topbar-nav">
+      <a href="{% url 'game_list' %}">対局一覧</a>
+      {% if request.user.is_superuser %}<a href="{% url 'user_list' %}" class="active">ユーザ管理</a>{% endif %}
+      <div class="nav-sep"></div>
+      <span class="topbar-user">{{ request.user.username }}</span>
+      <a href="{% url 'logout' %}">ログアウト</a>
+    </nav>
+  </header>
+  <main class="page-main">
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+    <div class="page-header">
+      <div class="page-header-left">
+        <p class="page-eyebrow">管理</p>
+        <h1 class="page-title">ユーザ照会</h1>
+        <p class="count-badge">{{ users.count }} 件</p>
+      </div>
+    </div>
+    {% if users %}
+    <table class="data-table">
+      <thead><tr><th>ID</th><th>ユーザ名</th><th>権限</th><th>登録日</th><th>操作</th></tr></thead>
+      <tbody>
+        {% for user in users %}
+        <tr>
+          <td><span style="font-family:var(--mono);font-size:11px;color:var(--ink-muted)">#{{ user.id }}</span></td>
+          <td><a href="{% url 'user_edit' user.id %}" class="link">{{ user.username }}</a></td>
+          <td>
+            {% if user.is_superuser %}<span class="badge badge-admin">スーパーユーザ</span>
+            {% elif user.is_staff %}<span class="badge badge-admin">スタッフ</span>
+            {% else %}<span class="badge">一般</span>{% endif %}
+          </td>
+          <td style="font-family:var(--mono);font-size:11px">{{ user.date_joined|date:"Y/m/d" }}</td>
+          <td>
+            <div style="display:flex;gap:8px">
+              <a href="{% url 'user_edit' user.id %}" class="btn btn-ghost btn-sm">編集</a>
+              {% if request.user.is_superuser %}
+              <a href="{% url 'user_delete' user.id %}" class="btn btn-danger btn-sm">削除</a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><div class="empty-state-icon">👤</div>登録されているユーザはいません。</div>
+    {% endif %}
+  </main>
+</div>
+{% endblock %}

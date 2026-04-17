@@ -1,0 +1,165 @@
+{% extends "accounts/base.html" %}
+{% load session_tags %}
+{% block title %}対局結果一覧 — {{ room.name }}{% endblock %}
+{% block body %}
+<div class="app-shell">
+  <header class="topbar">
+    <a href="{% url 'game_list' %}" class="topbar-brand">🀄 MJS</a>
+    <nav class="topbar-nav">
+      <a href="{% url 'game_list' %}" class="active">対局一覧</a>
+      <a href="{% url 'battle_record' %}">対戦記録</a>
+      {% if request.user.is_superuser %}<a href="{% url 'user_list' %}">ユーザ管理</a>{% endif %}
+      <div class="nav-sep"></div>
+      <span class="topbar-user">{{ request.user.username }}</span>
+      <a href="{% url 'logout' %}">ログアウト</a>
+    </nav>
+  </header>
+  <main class="page-main" style="max-width:1200px">
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+
+    <div class="page-header">
+      <div class="page-header-left">
+        <p class="page-eyebrow">対局結果一覧</p>
+        <h1 class="page-title">{{ room.name }}</h1>
+        <p class="count-badge">ルール：{{ room.rule.name }}</p>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <a href="{% url 'game_list' %}" class="btn btn-ghost">← 対局一覧に戻る</a>
+        <a href="{% url 'session_create' room.id %}" class="btn btn-teal">＋ 対局結果を追加する</a>
+      </div>
+    </div>
+
+    <!-- ① 合計戦績 -->
+    <section style="margin-bottom:40px">
+      <h2 class="section-title">合計戦績</h2>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>順位</th><th>ユーザ名</th><th>合計ポイント</th><th>平均着順</th><th>消化対局数</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in summary %}
+          <tr>
+            <td style="font-family:var(--mono);font-size:13px;text-align:center">{{ forloop.counter }}</td>
+            <td>
+              <a href="{% url 'battle_record' %}?user_id={{ s.user.id }}&room_id={{ room.id }}"
+                 class="link">{{ s.user.username }}</a>
+            </td>
+            <td>
+              <button class="pts-toggle {% if s.total_pts >= 0 %}pts-pos{% else %}pts-neg{% endif %}"
+                      onclick="toggleDetail('user-{{ s.user.id }}')">
+                {% if s.total_pts >= 0 %}+{{ s.total_pts }}{% else %}▲{{ s.total_pts|floatformat:1|slice:"1:" }}{% endif %}
+              </button>
+              <div id="user-{{ s.user.id }}-detail" class="pts-detail" style="display:none">
+                <table class="inner-table">
+                  <thead><tr><th>対局No</th><th>着順</th><th>獲得pts</th></tr></thead>
+                  <tbody>
+                    {% for d in s.details %}
+                    <tr>
+                      <td>対局{{ d.session.session_number }}</td>
+                      <td>{{ d.rank }}着</td>
+                      <td class="{% if d.pts >= 0 %}pts-pos{% else %}pts-neg{% endif %}">
+                        {% if d.pts >= 0 %}+{{ d.pts }}{% else %}▲{{ d.pts|floatformat:1|slice:"1:" }}{% endif %}
+                      </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" style="text-align:center;color:var(--ink-muted)">データなし</td></tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </td>
+            <td style="text-align:center">{% if s.avg_rank %}{{ s.avg_rank }}位{% else %}—{% endif %}</td>
+            <td style="font-family:var(--mono);text-align:center">{{ s.count }} / {{ room.game_count }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="empty-state">まだ対局結果がありません。</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ② 対局詳細 -->
+    <section>
+      <h2 class="section-title">対局詳細</h2>
+      {% if sessions %}
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>対局No</th><th>対局日</th><th>起家</th><th>南家</th><th>西家</th><th>北家</th><th>状態</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for sess in sessions %}
+          <tr>
+            <td><a href="{% url 'session_edit' room.id sess.id %}" class="link">対局{{ sess.session_number }}</a></td>
+            <td style="font-family:var(--mono);font-size:12px">{{ sess.game_date }}</td>
+            <td>{{ sess.player_east.username }}
+              {% if sess.pts_east != None %}
+                <span class="{% if sess.pts_east >= 0 %}pts-pos{% else %}pts-neg{% endif %} pts-small">
+                  {% if sess.pts_east >= 0 %}+{{ sess.pts_east }}{% else %}▲{{ sess.pts_east|floatformat:1|slice:"1:" }}{% endif %}
+                </span>
+              {% endif %}
+            </td>
+            <td>{{ sess.player_south.username }}
+              {% if sess.pts_south != None %}
+                <span class="{% if sess.pts_south >= 0 %}pts-pos{% else %}pts-neg{% endif %} pts-small">
+                  {% if sess.pts_south >= 0 %}+{{ sess.pts_south }}{% else %}▲{{ sess.pts_south|floatformat:1|slice:"1:" }}{% endif %}
+                </span>
+              {% endif %}
+            </td>
+            <td>{{ sess.player_west.username }}
+              {% if sess.pts_west != None %}
+                <span class="{% if sess.pts_west >= 0 %}pts-pos{% else %}pts-neg{% endif %} pts-small">
+                  {% if sess.pts_west >= 0 %}+{{ sess.pts_west }}{% else %}▲{{ sess.pts_west|floatformat:1|slice:"1:" }}{% endif %}
+                </span>
+              {% endif %}
+            </td>
+            <td>{{ sess.player_north.username }}
+              {% if sess.pts_north != None %}
+                <span class="{% if sess.pts_north >= 0 %}pts-pos{% else %}pts-neg{% endif %} pts-small">
+                  {% if sess.pts_north >= 0 %}+{{ sess.pts_north }}{% else %}▲{{ sess.pts_north|floatformat:1|slice:"1:" }}{% endif %}
+                </span>
+              {% endif %}
+            </td>
+            <td>
+              {% if sess.is_finalized %}
+                <span class="badge" style="background:#e8f5e9;border-color:#4caf50;color:#2e7d32">確定済</span>
+              {% else %}
+                <span class="badge">入力中</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty-state"><div class="empty-state-icon">🀄</div>まだ対局がありません。</div>
+      {% endif %}
+    </section>
+  </main>
+</div>
+
+<style>
+.section-title { font-size:15px; font-weight:700; margin-bottom:12px; padding-left:8px; border-left:3px solid var(--teal); }
+.pts-toggle { background:none; border:none; cursor:pointer; font-weight:700; font-size:13px; font-family:var(--mono); padding:2px 6px; border-radius:3px; transition:background 0.15s; }
+.pts-toggle:hover { background:var(--paper-warm); }
+.pts-pos { color:var(--teal); }
+.pts-neg { color:var(--accent); }
+.pts-small { font-family:var(--mono); font-size:11px; margin-left:6px; }
+.pts-detail { margin-top:8px; }
+.inner-table { width:100%; font-size:12px; border-collapse:collapse; }
+.inner-table th { background:var(--paper-warm); padding:4px 10px; font-size:10px; letter-spacing:0.08em; text-align:left; font-family:var(--mono); }
+.inner-table td { padding:4px 10px; border-bottom:1px solid var(--border); }
+</style>
+
+<script>
+function toggleDetail(userId) {
+  const el = document.getElementById(userId + '-detail');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+</script>
+{% endblock %}

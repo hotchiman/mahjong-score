@@ -1,0 +1,37 @@
+{% extends "accounts/base.html" %}
+{% block title %}ユーザ削除{% endblock %}
+{% block body %}
+<div class="app-shell">
+  <header class="topbar">
+    <a href="{% url 'game_list' %}" class="topbar-brand">🀄 MJS</a>
+    <nav class="topbar-nav">
+      <a href="{% url 'game_list' %}">対局一覧</a>
+      <a href="{% url 'user_list' %}" class="active">ユーザ管理</a>
+      <div class="nav-sep"></div>
+      <span class="topbar-user">{{ request.user.username }}</span>
+      <a href="{% url 'logout' %}">ログアウト</a>
+    </nav>
+  </header>
+  <main class="page-main">
+    <div class="page-header">
+      <div class="page-header-left">
+        <p class="page-eyebrow">削除確認</p>
+        <h1 class="page-title">ユーザ削除</h1>
+      </div>
+    </div>
+    <div style="max-width:480px">
+      <div class="danger-zone">
+        <h3>⚠ この操作は取り消せません</h3>
+        <p>ユーザ「<strong>{{ target_user.username }}</strong>」（#{{ target_user.id }}）を削除します。<br>関連する対局データも削除される場合があります。</p>
+        <form method="post">
+          {% csrf_token %}
+          <div style="display:flex;gap:12px">
+            <button type="submit" class="btn btn-accent">削除する</button>
+            <a href="{% url 'user_list' %}" class="btn btn-ghost">キャンセル</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+{% endblock %}

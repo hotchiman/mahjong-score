@@ -1,0 +1,29 @@
+{% extends "accounts/base.html" %}
+{% block title %}ログイン{% endblock %}
+{% block body %}
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="brand-mark"><span>🀄 Mahjong Score</span></div>
+    <p class="auth-eyebrow">認証</p>
+    <h1 class="auth-title">ログイン</h1>
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-group">
+        <label for="username">ユーザ名</label>
+        <input type="text" id="username" name="username" value="{{ request.POST.username }}" placeholder="ユーザ名" autofocus>
+      </div>
+      <div class="form-group">
+        <label for="password">パスワード</label>
+        <input type="password" id="password" name="password" placeholder="パスワード">
+      </div>
+      <button type="submit" class="btn btn-primary btn-full">ログイン</button>
+    </form>
+    <div class="auth-footer">
+      アカウントをお持ちでない方は <a href="{% url 'register' %}">アカウント作成はこちら</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

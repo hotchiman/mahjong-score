@@ -1,0 +1,130 @@
+{% extends "accounts/base.html" %}
+{% block title %}対戦記録{% endblock %}
+{% block body %}
+<div class="app-shell">
+  <header class="topbar">
+    <a href="{% url 'game_list' %}" class="topbar-brand">🀄 MJS</a>
+    <nav class="topbar-nav">
+      <a href="{% url 'game_list' %}">対局一覧</a>
+      <a href="{% url 'battle_record' %}" class="active">対戦記録</a>
+      <a href="{% url 'user_list' %}">ユーザ管理</a>
+      <div class="nav-sep"></div>
+      <span class="topbar-user">{{ request.user.username }}</span>
+      <a href="{% url 'logout' %}">ログアウト</a>
+    </nav>
+  </header>
+  <main class="page-main">
+    <div class="page-header">
+      <div class="page-header-left">
+        <p class="page-eyebrow">統計</p>
+        <h1 class="page-title">対戦記録</h1>
+      </div>
+    </div>
+
+    <!-- 検索条件 -->
+    <form method="get" class="card" style="margin-bottom:28px;padding:20px 24px">
+      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end">
+        <div class="form-group" style="margin:0;min-width:160px">
+          <label for="user_id">ユーザ名</label>
+          <select id="user_id" name="user_id">
+            <option value="">— 選択 —</option>
+            {% for u in users %}<option value="{{ u.id }}" {% if sel_user_id == u.id|stringformat:"s" %}selected{% endif %}>{{ u.username }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group" style="margin:0;min-width:200px">
+          <label for="room_id">対局名</label>
+          <select id="room_id" name="room_id">
+            <option value="">— すべて —</option>
+            {% for r in rooms %}<option value="{{ r.id }}" {% if sel_room_id == r.id|stringformat:"s" %}selected{% endif %}>{{ r.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group" style="margin:0;min-width:160px">
+          <label for="rule_id">ルール</label>
+          <select id="rule_id" name="rule_id">
+            <option value="">— すべて —</option>
+            {% for r in rules %}<option value="{{ r.id }}" {% if sel_rule_id == r.id|stringformat:"s" %}selected{% endif %}>{{ r.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary" style="margin-top:auto">検索</button>
+      </div>
+    </form>
+
+    {% if target_user and stats %}
+    <h2 style="font-size:17px;font-weight:700;margin-bottom:20px;padding-bottom:10px;border-bottom:2px solid var(--ink)">
+      {{ target_user.username }} の対戦記録
+    </h2>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px">
+
+      <!-- 基本情報 -->
+      <div class="card stat-card">
+        <div class="stat-card-title">📊 基本情報</div>
+        <dl class="stat-dl">
+          <dt>記録対戦数</dt><dd>{{ stats.battle_count }} 戦</dd>
+          <dt>和了率</dt><dd>{{ stats.agari_rate }}%</dd>
+          <dt>放銃率</dt><dd>{{ stats.houjuu_rate }}%</dd>
+          <dt>ツモ率</dt><dd>{{ stats.tsumo_rate }}%</dd>
+          <dt>ダマ率</dt><dd>{{ stats.dama_rate }}%</dd>
+          <dt>流局率</dt><dd>{{ stats.ryukyoku_rate }}%</dd>
+          <dt>流局聴牌率</dt><dd>{{ stats.tenpai_rate }}%</dd>
+          <dt>副露率</dt><dd>{{ stats.furo_rate }}%</dd>
+          <dt>立直率</dt><dd>{{ stats.riichi_rate }}%</dd>
+          <dt>平均順位</dt><dd>{% if stats.avg_rank %}{{ stats.avg_rank }} 位{% else %}—{% endif %}</dd>
+          <dt>平均和了</dt><dd>{{ stats.agari_income }} 点</dd>
+          <dt>平均放銃</dt><dd>{{ stats.houjuu_loss }} 点</dd>
+        </dl>
+      </div>
+
+      <!-- 立直 -->
+      <div class="card stat-card">
+        <div class="stat-card-title">🎯 立直</div>
+        <dl class="stat-dl">
+          <dt>立直率</dt><dd>{{ stats.riichi_rate }}%</dd>
+          <dt>立直和了率</dt><dd>{{ stats.riichi_agari_rate }}%</dd>
+          <dt>立直放銃率</dt><dd>{{ stats.riichi_houjuu_rate }}%</dd>
+          <dt>立直収支</dt><dd>{{ stats.riichi_balance }} 点</dd>
+          <dt>立直収入</dt><dd>{{ stats.riichi_income }} 点</dd>
+          <dt>立直支出</dt><dd>{{ stats.riichi_loss }} 点</dd>
+          <dt>立直流局率</dt><dd>{{ stats.riichi_ryukyoku_rate }}%</dd>
+          <dt>一発率</dt><dd>{{ stats.ippatsu_rate }}%</dd>
+        </dl>
+      </div>
+
+      <!-- ほか -->
+      <div class="card stat-card">
+        <div class="stat-card-title">📈 ほか</div>
+        <dl class="stat-dl">
+          <dt>裏ドラ率</dt><dd>{{ stats.ura_rate }}%</dd>
+          <dt>打点効率</dt><dd>{{ stats.daten_efficiency }}</dd>
+          <dt>銃点損失</dt><dd>{{ stats.juten_loss }}</dd>
+          <dt>調整打点効率</dt><dd>{{ stats.adjusted_efficiency }}</dd>
+          <dt>局収支</dt><dd>{{ stats.kyoku_balance_avg }} 点</dd>
+          <dt>総局数</dt><dd>{{ stats.total_kyoku }} 局</dd>
+          {% if stats.total_pts is not None %}
+          <dt>獲得合計pts</dt>
+          <dd class="{% if stats.total_pts >= 0 %}pts-pos{% else %}pts-neg{% endif %}" style="font-weight:700;font-family:var(--mono)">
+            {% if stats.total_pts >= 0 %}+{{ stats.total_pts }}{% else %}▲{{ stats.total_pts|floatformat:1|slice:"1:" }}{% endif %} pts
+          </dd>
+          {% endif %}
+        </dl>
+      </div>
+
+    </div>
+    {% elif target_user %}
+    <div class="empty-state"><div class="empty-state-icon">📊</div>対戦データがありません。</div>
+    {% else %}
+    <div class="empty-state"><div class="empty-state-icon">👤</div>ユーザを選択すると対戦記録が表示されます。</div>
+    {% endif %}
+  </main>
+</div>
+
+<style>
+.pts-pos { color:var(--teal); }
+.pts-neg { color:var(--accent); }
+.stat-card { padding:20px 24px; }
+.stat-card-title { font-weight:700; font-size:14px; margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid var(--border); }
+.stat-dl { display:grid; grid-template-columns:1fr auto; gap:6px 16px; align-items:baseline; }
+.stat-dl dt { font-size:12px; color:var(--ink-muted); }
+.stat-dl dd { font-family:var(--mono); font-size:13px; font-weight:700; text-align:right; }
+</style>
+{% endblock %}

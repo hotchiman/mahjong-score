@@ -1,0 +1,87 @@
+{% extends "accounts/base.html" %}
+{% block title %}対局一覧{% endblock %}
+{% block body %}
+<div class="app-shell">
+  <header class="topbar">
+    <a href="{% url 'game_list' %}" class="topbar-brand">🀄 MJS</a>
+    <nav class="topbar-nav">
+      <a href="{% url 'game_list' %}" class="active">対局一覧</a>
+      <a href="{% url 'battle_record' %}">対戦記録</a>
+      {% if request.user.is_superuser %}
+      <a href="{% url 'user_list' %}">ユーザ管理</a>
+      {% endif %}
+      <div class="nav-sep"></div>
+      <span class="topbar-user">{{ request.user.username }}</span>
+      <a href="{% url 'logout' %}">ログアウト</a>
+    </nav>
+  </header>
+  <main class="page-main">
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+    <div class="page-header">
+      <div class="page-header-left">
+        <p class="page-eyebrow">麻雀対局管理</p>
+        <h1 class="page-title">対局一覧</h1>
+        <p class="count-badge">{{ rooms|length }} 件</p>
+      </div>
+      <div style="display:flex;gap:10px">
+        <a href="{% url 'battle_record' %}" class="btn btn-ghost">対戦記録</a>
+        <a href="{% url 'game_create' %}" class="btn btn-teal">＋ 対局作成</a>
+      </div>
+    </div>
+
+    {% if rooms %}
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>対局名</th><th>ルール</th><th>対局数</th><th>参加者</th><th>作成者</th><th>対局結果</th><th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for room in rooms %}
+        <tr>
+          <td><a href="{% url 'game_result_list' room.id %}" class="link">{{ room.name }}</a></td>
+          <td><span class="badge badge-rule">{{ room.rule.name }}</span></td>
+          <td style="font-family:var(--mono);font-size:12px;text-align:center">{{ room.game_count }}</td>
+          <td style="font-family:var(--mono);font-size:12px;text-align:center">{{ room.members.count }} 名</td>
+          <td style="font-size:12px;color:var(--ink-muted)">{{ room.created_by.username }}</td>
+          <td style="font-size:12px;color:var(--ink-muted)">—</td>
+          <td>
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+              <a href="{% url 'game_join' room.invite_token %}" class="btn btn-ghost btn-sm">参加</a>
+              <button class="btn btn-ghost btn-sm"
+                onclick="copyInviteLink('{{ request.scheme }}://{{ request.get_host }}{% url "game_join" room.invite_token %}')"
+                title="招待リンクをコピー">招待</button>
+              {% if request.user.is_superuser %}
+              <a href="{% url 'game_delete' room.id %}" class="btn btn-danger btn-sm">削除</a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-state-icon">🀄</div>
+      対局ルームがありません。<br>
+      <a href="{% url 'game_create' %}" class="link" style="margin-top:12px;display:inline-block">対局を作成する →</a>
+    </div>
+    {% endif %}
+  </main>
+</div>
+
+<div id="toast" style="position:fixed;bottom:24px;right:24px;background:var(--ink);color:var(--paper);padding:12px 20px;border-radius:var(--radius);font-size:13px;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:9999">
+  招待リンクをコピーしました
+</div>
+<script>
+function copyInviteLink(url) {
+  navigator.clipboard.writeText(url).then(() => {
+    const toast = document.getElementById('toast');
+    toast.style.opacity = '1';
+    setTimeout(() => { toast.style.opacity = '0'; }, 2500);
+  }).catch(() => { prompt('招待リンクをコピーしてください:', url); });
+}
+</script>
+{% endblock %}

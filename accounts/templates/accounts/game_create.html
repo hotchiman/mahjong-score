@@ -1,0 +1,106 @@
+{% extends "accounts/base.html" %}
+{% block title %}対局ルーム作成{% endblock %}
+{% block body %}
+<div class="app-shell">
+  <header class="topbar">
+    <a href="{% url 'game_list' %}" class="topbar-brand">🀄 MJS</a>
+    <nav class="topbar-nav">
+      <a href="{% url 'game_list' %}" class="active">対局一覧</a>
+      <a href="{% url 'user_list' %}">ユーザ管理</a>
+      <div class="nav-sep"></div>
+      <span class="topbar-user">{{ request.user.username }}</span>
+      <a href="{% url 'logout' %}">ログアウト</a>
+    </nav>
+  </header>
+  <main class="page-main">
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+    <div class="page-header">
+      <div class="page-header-left">
+        <p class="page-eyebrow">対局管理</p>
+        <h1 class="page-title">対局ルーム作成</h1>
+      </div>
+    </div>
+
+    <div class="card" style="max-width:520px">
+      <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+          <label for="name">対局名</label>
+          <input type="text" id="name" name="name"
+            value="{{ request.POST.name }}" placeholder="例）2024年末大会" autofocus>
+        </div>
+
+        <div class="form-group">
+          <label for="game_count">対局数</label>
+          <input type="number" id="game_count" name="game_count" min="1"
+            value="{{ request.POST.game_count|default:4 }}" placeholder="例）4">
+        </div>
+
+        <div class="form-group">
+          <label for="rule">ルール</label>
+          <select id="rule" name="rule" onchange="updateAccordion(this)">
+            <option value="">— ルールを選択 —</option>
+            {% for rule in rules %}
+            <option value="{{ rule.id }}"
+              data-detail="{{ rule.detail }}"
+              {% if request.POST.rule == rule.id|stringformat:"s" %}selected{% endif %}>
+              {{ rule.name }}
+            </option>
+            {% endfor %}
+          </select>
+
+          <!-- アコーディオン：ルール詳細 -->
+          <div class="accordion" id="rule-accordion" style="display:none;margin-top:8px">
+            <button type="button" class="accordion-trigger" onclick="toggleAccordion()">
+              <span>ルール詳細を見る</span>
+              <span class="accordion-icon" id="accordion-icon">▼</span>
+            </button>
+            <div class="accordion-content" id="accordion-content">
+              <span id="rule-detail-text"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-teal">作成する</button>
+          <a href="{% url 'game_list' %}" class="btn btn-ghost">キャンセル</a>
+        </div>
+      </form>
+    </div>
+  </main>
+</div>
+
+<script>
+function updateAccordion(select) {
+  const accordion = document.getElementById('rule-accordion');
+  const detailText = document.getElementById('rule-detail-text');
+  const option = select.options[select.selectedIndex];
+  const detail = option.dataset.detail;
+
+  if (detail) {
+    accordion.style.display = 'block';
+    detailText.textContent = detail;
+    // 選択時にアコーディオンを自動展開
+    document.getElementById('accordion-content').classList.add('open');
+    document.getElementById('accordion-icon').classList.add('open');
+  } else {
+    accordion.style.display = 'none';
+  }
+}
+
+function toggleAccordion() {
+  const content = document.getElementById('accordion-content');
+  const icon = document.getElementById('accordion-icon');
+  content.classList.toggle('open');
+  icon.classList.toggle('open');
+}
+
+// ページロード時：POSTで戻ってきた場合にルール詳細を復元
+window.addEventListener('DOMContentLoaded', () => {
+  const select = document.getElementById('rule');
+  if (select.value) updateAccordion(select);
+});
+</script>
+{% endblock %}

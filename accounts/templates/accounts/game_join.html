@@ -1,0 +1,117 @@
+{% extends "accounts/base.html" %}
+{% block title %}対局ルーム参加{% endblock %}
+{% block body %}
+<div class="app-shell">
+  <header class="topbar">
+    <a href="{% url 'game_list' %}" class="topbar-brand">🀄 MJS</a>
+    <nav class="topbar-nav">
+      <a href="{% url 'game_list' %}" class="active">対局一覧</a>
+      <a href="{% url 'user_list' %}">ユーザ管理</a>
+      <div class="nav-sep"></div>
+      <span class="topbar-user">{{ request.user.username }}</span>
+      <a href="{% url 'logout' %}">ログアウト</a>
+    </nav>
+  </header>
+  <main class="page-main">
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+    <div class="page-header">
+      <div class="page-header-left">
+        <p class="page-eyebrow">参加</p>
+        <h1 class="page-title">対局ルーム参加</h1>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
+
+      <!-- 左：対局情報 -->
+      <div class="card">
+        <h2 style="font-size:15px;font-weight:700;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--border)">対局情報</h2>
+        <dl style="display:grid;grid-template-columns:auto 1fr;gap:10px 16px;align-items:baseline">
+          <dt style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-muted)">対局名</dt>
+          <dd style="font-size:14px;font-weight:700">{{ room.name }}</dd>
+
+          <dt style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-muted)">ルール</dt>
+          <dd><span class="badge badge-rule">{{ room.rule.name }}</span></dd>
+
+          <dt style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-muted)">ルール詳細</dt>
+          <dd style="font-size:13px;color:var(--ink-soft)">{{ room.rule.detail }}</dd>
+
+          <dt style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-muted)">対局数</dt>
+          <dd style="font-family:var(--mono);font-size:13px">{{ room.game_count }} 局</dd>
+
+          <dt style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-muted)">作成者</dt>
+          <dd style="font-size:13px">{{ room.created_by.username }}</dd>
+
+          <dt style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-muted)">作成日時</dt>
+          <dd style="font-family:var(--mono);font-size:11px;color:var(--ink-muted)">{{ room.created_at|date:"Y/m/d H:i" }}</dd>
+        </dl>
+
+        <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border)">
+          {% if already_joined %}
+            <div class="alert alert-info" style="margin-bottom:0">✓ すでにこの対局ルームに参加しています。</div>
+          {% else %}
+            <form method="post">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-teal btn-full">参加する</button>
+            </form>
+          {% endif %}
+        </div>
+
+        <!-- 招待リンク -->
+        <div style="margin-top:16px">
+          <label style="margin-bottom:6px;display:block">招待リンク</label>
+          <div class="invite-box">
+            <span class="invite-url" id="invite-url">{{ request.scheme }}://{{ request.get_host }}{% url "game_join" room.invite_token %}</span>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="copyLink()">コピー</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右：参加者一覧 -->
+      <div class="card">
+        <h2 style="font-size:15px;font-weight:700;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--border)">
+          参加者 <span style="font-family:var(--mono);font-size:12px;font-weight:400;color:var(--ink-muted)">{{ members.count }} 名</span>
+        </h2>
+        {% if members %}
+        <ul class="member-list">
+          {% for member in members %}
+          <li class="member-item">
+            <div class="member-avatar">{{ member.user.username|first|upper }}</div>
+            <span class="member-name">
+              {{ member.user.username }}
+              {% if member.user == room.created_by %}
+                <span class="badge" style="margin-left:6px">作成者</span>
+              {% endif %}
+            </span>
+            <span class="member-date">{{ member.joined_at|date:"m/d H:i" }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="empty-state" style="padding:24px">まだ参加者はいません。</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div style="margin-top:20px">
+      <a href="{% url 'game_list' %}" class="btn btn-ghost">← 対局一覧に戻る</a>
+    </div>
+  </main>
+</div>
+
+<div id="toast" style="position:fixed;bottom:24px;right:24px;background:var(--ink);color:var(--paper);padding:12px 20px;border-radius:var(--radius);font-size:13px;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:9999">
+  招待リンクをコピーしました
+</div>
+<script>
+function copyLink() {
+  const url = document.getElementById('invite-url').textContent;
+  navigator.clipboard.writeText(url).then(() => {
+    const t = document.getElementById('toast');
+    t.style.opacity = '1';
+    setTimeout(() => { t.style.opacity = '0'; }, 2500);
+  }).catch(() => { prompt('リンクをコピーしてください:', url); });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "accounts/base.html" %}
+{% block title %}対局ルーム削除{% endblock %}
+{% block body %}
+<div class="app-shell">
+  <header class="topbar">
+    <a href="{% url 'game_list' %}" class="topbar-brand">🀄 MJS</a>
+    <nav class="topbar-nav">
+      <a href="{% url 'game_list' %}" class="active">対局一覧</a>
+      <a href="{% url 'user_list' %}">ユーザ管理</a>
+      <div class="nav-sep"></div>
+      <span class="topbar-user">{{ request.user.username }}</span>
+      <a href="{% url 'logout' %}">ログアウト</a>
+    </nav>
+  </header>
+  <main class="page-main">
+    <div class="page-header">
+      <div class="page-header-left">
+        <p class="page-eyebrow">削除確認</p>
+        <h1 class="page-title">対局ルーム削除</h1>
+      </div>
+    </div>
+    <div style="max-width:520px">
+      <div class="danger-zone">
+        <h3>⚠ この操作は取り消せません</h3>
+        <p>
+          対局ルーム「<strong>{{ room.name }}</strong>」を削除します。<br>
+          このルームに紐づく<strong>すべての対局結果・局データ</strong>も併せて削除されます。
+        </p>
+        <dl style="display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin-bottom:20px;font-size:13px">
+          <dt style="color:var(--ink-muted)">ルール</dt><dd>{{ room.rule.name }}</dd>
+          <dt style="color:var(--ink-muted)">作成者</dt><dd>{{ room.created_by.username }}</dd>
+          <dt style="color:var(--ink-muted)">対局数</dt><dd>{{ room.sessions.count }} 試合</dd>
+          <dt style="color:var(--ink-muted)">作成日</dt><dd>{{ room.created_at|date:"Y/m/d" }}</dd>
+        </dl>
+        <form method="post">
+          {% csrf_token %}
+          <div style="display:flex;gap:12px">
+            <button type="submit" class="btn btn-accent">削除する</button>
+            <a href="{% url 'game_list' %}" class="btn btn-ghost">キャンセル</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+{% endblock %}

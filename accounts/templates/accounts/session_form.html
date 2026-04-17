@@ -1,0 +1,559 @@
+{% extends "accounts/base.html" %}
+{% load session_tags %}
+{% block title %}{% if readonly %}対局結果照会{% else %}対局結果登録{% endif %} — {{ room.name }}{% endblock %}
+
+{% block body %}
+<div class="app-shell">
+  <header class="topbar">
+    <a href="{% url 'game_list' %}" class="topbar-brand">🀄 MJS</a>
+    <nav class="topbar-nav">
+      <a href="{% url 'game_list' %}">対局一覧</a>
+      <a href="{% url 'game_result_list' room.id %}" class="active">対局結果</a>
+      <div class="nav-sep"></div>
+      <span class="topbar-user">{{ request.user.username }}</span>
+      <a href="{% url 'logout' %}">ログアウト</a>
+    </nav>
+  </header>
+
+  <main style="padding:20px 16px;max-width:100%">
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}" style="max-width:900px">{{ message }}</div>
+    {% endfor %}
+
+    <p class="page-eyebrow">{% if readonly %}照会{% else %}登録{% endif %}</p>
+    <h1 class="page-title" style="font-size:20px;margin-bottom:16px">
+      {% if readonly %}対局結果照会{% else %}対局結果登録{% endif %}
+    </h1>
+
+    <!-- ── ヘッダーカード ── -->
+    <div style="background:white;border:1px solid var(--border);padding:16px 20px;margin-bottom:14px;box-shadow:var(--shadow)">
+      <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+        <span style="font-size:13px"><strong>{{ room.name }}</strong>
+          <span class="badge badge-rule" style="margin-left:8px">{{ room.rule.name }}</span>
+        </span>
+        <span style="font-size:12px;color:var(--ink-muted)">対局 No.{{ session_number }}</span>
+        <span style="display:flex;align-items:center;gap:6px;font-size:13px">
+          <label style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-muted);margin:0">対局日</label>
+          {% if readonly %}
+            <span style="font-family:var(--mono)">{{ session.game_date }}</span>
+          {% else %}
+            <input type="date" id="game_date"
+              style="padding:5px 9px;border:1px solid var(--border);border-radius:2px;font-size:13px"
+              value="{% if session %}{{ session.game_date|date:'Y-m-d' }}{% endif %}">
+          {% endif %}
+        </span>
+      </div>
+
+      <!-- 座席 -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;max-width:760px">
+        {% for seat_key, seat_label in seats %}
+        <div style="border:1px solid var(--border);padding:10px 12px;border-radius:2px;background:var(--paper-warm)">
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-muted);margin-bottom:5px">{{ seat_label }}</div>
+          {% if readonly %}
+            <div style="font-weight:700;font-size:14px">{{ session|get_player:seat_key }}</div>
+          {% else %}
+            <select id="player_{{ seat_key }}" onchange="updateSeatLabels()"
+              style="width:100%;font-size:13px;padding:4px 6px">
+              <option value="">— 選択 —</option>
+              {% for m in members %}
+                <option value="{{ m.id }}"
+                  {% if session %}{% if session|get_player_id:seat_key == m.id %}selected{% endif %}{% endif %}>
+                  {{ m.username }}
+                </option>
+              {% endfor %}
+            </select>
+          {% endif %}
+          {% if session and session.is_finalized %}
+            {% with pts=session|get_pts:seat_key rank=session|get_rank:seat_key %}
+            <div style="margin-top:5px;font-family:var(--mono);font-size:12px;font-weight:700">
+              {% if rank %}{{ rank }}着　{% endif %}
+              <span class="{% if pts >= 0 %}pts-pos{% else %}pts-neg{% endif %}">
+                {% if pts >= 0 %}+{{ pts }}{% else %}▲{{ pts|floatformat:1|slice:"1:" }}{% endif %}
+              </span> pts
+            </div>
+            {% endwith %}
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- ── アクションボタン ── -->
+    {% if not readonly %}
+    <div style="display:flex;gap:10px;margin-bottom:14px;align-items:center;flex-wrap:wrap">
+      <button type="button" class="btn btn-primary" onclick="saveForm(false)">保存</button>
+      <button type="button" class="btn btn-accent" onclick="saveForm(true)">対局確定</button>
+      <span style="font-size:11px;color:var(--ink-muted)">対局確定：全局入力後に押下。最終持ち点から獲得ptsを算出します。</span>
+    </div>
+    {% else %}
+    <div style="margin-bottom:14px">
+      <a href="{% url 'game_result_list' room.id %}" class="btn btn-ghost">← 対局結果一覧に戻る</a>
+    </div>
+    {% endif %}
+
+    <!-- ── 局テーブル（横スクロール） ── -->
+    <div style="overflow-x:auto;border:1px solid #bbb">
+      <table id="rounds-table" style="border-collapse:collapse;font-size:11px;white-space:nowrap">
+        <thead>
+          <tr>
+            <th rowspan="2" class="th-base" style="min-width:120px">局 / 本場</th>
+            <th rowspan="2" class="th-base th-sm">供託数</th>
+            <th rowspan="2" class="th-base th-sm">流局</th>
+            <th colspan="10" class="th-seat th-east"  id="head-east">起家</th>
+            <th colspan="10" class="th-seat th-south" id="head-south">南家</th>
+            <th colspan="10" class="th-seat th-west"  id="head-west">西家</th>
+            <th colspan="10" class="th-seat th-north" id="head-north">北家</th>
+            <th colspan="7"  class="th-seat th-yaku">役</th>
+          </tr>
+          <tr>
+            {% for _ in "xxxx" %}
+            <th class="th-sub th-cb">和了</th>
+            <th class="th-sub th-sm2">和了状態</th>
+            <th class="th-sub th-cb">放銃</th>
+            <th class="th-sub th-cb">副露</th>
+            <th class="th-sub th-cb">副露数</th>
+            <th class="th-sub th-cb">立直</th>
+            <th class="th-sub th-sm2">流局状態</th>
+            <th class="th-sub th-pts">局収支</th>
+            <th class="th-sub th-pts">供託点</th>
+            <th class="th-sub th-pts">持ち点</th>
+            {% endfor %}
+            <th class="th-sub th-sm2">和了者</th>
+            <th class="th-sub th-sm2">放銃者</th>
+            <th class="th-sub th-cb">翻</th>
+            <th class="th-sub th-cb">表</th>
+            <th class="th-sub th-cb">裏</th>
+            <th class="th-sub th-cb">赤</th>
+            <th class="th-sub" style="min-width:200px">役（デフォルト3・最大15）</th>
+          </tr>
+        </thead>
+        <tbody id="rounds-body"></tbody>
+      </table>
+    </div>
+
+    {% if not readonly %}
+    <div style="margin-top:10px;display:flex;gap:8px">
+      <button type="button" class="btn btn-ghost btn-sm" onclick="addRound()">＋ 局を追加</button>
+      <button type="button" class="btn btn-danger btn-sm" onclick="removeLastRound()">最終局を削除</button>
+    </div>
+    {% endif %}
+
+    <form id="main-form" method="post" action="">
+      {% csrf_token %}
+      <div id="form-fields"></div>
+    </form>
+  </main>
+</div>
+
+<style>
+.pts-pos { color:var(--teal); }
+.pts-neg { color:var(--accent); }
+
+.th-base, .th-seat, .th-sub {
+  border:1px solid #999;
+  padding:3px 5px;
+  text-align:center;
+  font-family:var(--mono);
+  font-size:9px;
+  letter-spacing:0.05em;
+}
+.th-base  { background:#1a1a1a; color:#eee; vertical-align:middle; }
+.th-seat  { color:#fff; font-size:10px; }
+.th-sub   { background:#2d2d2d; color:rgba(255,255,255,0.8); }
+.th-east  { background:#8B6914; }
+.th-south { background:#1b5e20; }
+.th-west  { background:#0d47a1; }
+.th-north { background:#6a0036; }
+.th-yaku  { background:#4a148c; }
+
+/* 列幅クラス */
+.th-cb  { min-width:30px; width:30px; }   /* チェックボックス系（狭） */
+.th-sm  { min-width:44px; width:44px; }   /* 供託数・流局 */
+.th-sm2 { min-width:70px; width:70px; }   /* 和了状態・流局状態・和了者・放銃者 */
+.th-pts { min-width:72px; width:72px; }   /* 局収支・供託点・持ち点（6桁収まる幅） */
+
+#rounds-table td {
+  border:1px solid #ccc;
+  padding:2px 3px;
+  vertical-align:middle;
+}
+.td-base   { background:#f5f5f5; }
+.td-east   { background:#fffde7; }
+.td-south  { background:#e8f5e9; }
+.td-west   { background:#e3f2fd; }
+.td-north  { background:#fce4ec; }
+.td-yaku   { background:#f3e5f5; }
+
+/* チェックボックス */
+#rounds-table input[type="checkbox"] {
+  width:14px; height:14px; cursor:pointer; vertical-align:middle; margin:0;
+}
+/* 数値入力（局収支・供託点） */
+#rounds-table input[type="number"].inp-pts {
+  width:68px; font-size:11px; padding:2px 3px;
+  border:1px solid #bbb; border-radius:1px;
+  text-align:right; background:transparent; font-family:var(--mono);
+}
+/* 持ち点（読み取り専用） */
+#rounds-table input[type="number"].inp-pts-ro {
+  width:68px; font-size:11px; padding:2px 3px;
+  border:1px solid #bbb; border-radius:1px;
+  text-align:right; background:#e8e8e8; font-family:var(--mono);
+  color:#333; font-weight:700; cursor:not-allowed;
+}
+/* 小数値入力（副露数・翻など） */
+#rounds-table input[type="number"].inp-sm {
+  width:28px; font-size:11px; padding:2px 2px;
+  border:1px solid #bbb; border-radius:1px;
+  text-align:right; background:transparent; font-family:var(--mono);
+}
+/* select */
+#rounds-table select {
+  font-size:10px; padding:2px 2px;
+  border:1px solid #bbb; border-radius:1px; background:transparent;
+}
+/* 局名セレクト */
+select.sel-round { max-width:58px; }
+/* 和了状態・流局状態 */
+select.sel-state { max-width:62px; }
+/* 和了者・放銃者 */
+select.sel-user  { max-width:66px; }
+/* 役名セレクト */
+select.sel-yaku  { max-width:140px; width:140px; font-size:10px; }
+
+.yaku-row-item {
+  display:flex; align-items:center; gap:2px; margin:1px 0;
+}
+.add-yaku-btn {
+  font-size:10px; padding:1px 5px;
+  border:1px solid #999; background:#e8e8e8;
+  cursor:pointer; border-radius:2px; margin-top:2px; white-space:nowrap;
+}
+.add-yaku-btn:hover { background:#ccc; }
+.del-yaku-btn {
+  font-size:9px; padding:0 3px;
+  border:1px solid #e57373; background:#ffebee;
+  cursor:pointer; border-radius:2px; color:#c62828; flex-shrink:0;
+}
+</style>
+
+<script>
+const SEATS    = ['east','south','west','north'];
+const SEAT_LBL = {east:'起家', south:'南家', west:'西家', north:'北家'};
+const SEAT_TD  = {east:'td-east', south:'td-south', west:'td-west', north:'td-north'};
+const ROUNDS   = {{ rounds_json|safe }};
+const YAKUS    = {{ yakus_json|safe }};
+const READONLY = {{ readonly_json|safe }};
+const EXISTING = {{ existing_rounds_json|default_if_none:"null"|safe }};
+const INIT_PTS = 25000;
+
+let roundCount = 0;
+
+/* ── ヘッダ更新 ── */
+function updateSeatLabels() {
+  SEATS.forEach(seat => {
+    const sel = document.getElementById('player_' + seat);
+    const hd  = document.getElementById('head-' + seat);
+    if (sel && hd) {
+      hd.textContent = SEAT_LBL[seat] + (sel.value ? '（' + sel.options[sel.selectedIndex].text + '）' : '');
+    }
+  });
+  for (let i = 1; i <= roundCount; i++) refreshMemberSelects(i);
+}
+
+function refreshMemberSelects(i) {
+  ['agari','houjuu'].forEach(t => {
+    const sel = document.getElementById(`r${i}_yaku_${t}`);
+    if (!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">—</option>';
+    SEATS.forEach(seat => {
+      const s = document.getElementById('player_' + seat);
+      if (s && s.value) {
+        const o = document.createElement('option');
+        o.value = s.value;
+        o.textContent = s.options[s.selectedIndex].text;
+        if (cur === s.value) o.selected = true;
+        sel.appendChild(o);
+      }
+    });
+  });
+}
+
+/* ── 持ち点の自動計算 ── */
+function calcPointsAfter(rowIdx, seat) {
+  const pf = `round_${rowIdx}_${seat}`;
+  const balEl  = document.getElementById(`${pf}_balance`);
+  const kyoEl  = document.getElementById(`${pf}_kyotaku_pts`);
+  const ptEl   = document.getElementById(`${pf}_points_after`);
+  if (!ptEl) return;
+
+  const bal = parseInt(balEl ? balEl.value : 0) || 0;
+  const kyo = parseInt(kyoEl ? kyoEl.value : 0) || 0;
+
+  let base;
+  if (rowIdx === 1) {
+    base = INIT_PTS;
+  } else {
+    const prevPtEl = document.getElementById(`round_${rowIdx - 1}_${seat}_points_after`);
+    base = parseInt(prevPtEl ? prevPtEl.value : INIT_PTS) || INIT_PTS;
+  }
+  ptEl.value = base + bal + kyo;
+}
+
+function recalcAllPoints() {
+  for (let i = 1; i <= roundCount; i++) {
+    SEATS.forEach(seat => calcPointsAfter(i, seat));
+  }
+}
+
+/* ── 役セル ── */
+function yakuSelectHTML(i, selectedId) {
+  let s = '<select class="sel-yaku"><option value="">—</option>';
+  YAKUS.forEach(y => {
+    s += `<option value="${y.id}" ${y.id == selectedId ? 'selected' : ''}>${y.name}</option>`;
+  });
+  return s + '</select>';
+}
+
+function yakuCellHTML(i, existingIds) {
+  if (READONLY) {
+    return existingIds && existingIds.length
+      ? existingIds.map(id => { const y = YAKUS.find(y => y.id == id); return y ? y.name : ''; })
+                   .filter(Boolean).join('、')
+      : '—';
+  }
+  const ids = existingIds && existingIds.length ? existingIds : [null, null, null];
+  let html = `<div id="yaku-list-${i}" style="display:flex;flex-direction:column;gap:1px">`;
+  ids.forEach((id, k) => {
+    const uid = `yi-${i}-${k}`;
+    html += `<div class="yaku-row-item" id="${uid}">
+      ${yakuSelectHTML(i, id)}
+      <button type="button" class="del-yaku-btn" onclick="removeYaku('${uid}')">✕</button>
+    </div>`;
+  });
+  html += '</div>';
+  html += `<button type="button" class="add-yaku-btn" onclick="addYaku(${i})">＋ 役追加</button>`;
+  return html;
+}
+
+function addYaku(i) {
+  const list = document.getElementById(`yaku-list-${i}`);
+  if (list.querySelectorAll('.yaku-row-item').length >= 15) {
+    alert('役は最大15個まで入力できます。'); return;
+  }
+  const uid = `yi-${i}-${Date.now()}`;
+  const div = document.createElement('div');
+  div.className = 'yaku-row-item';
+  div.id = uid;
+  div.innerHTML = yakuSelectHTML(i, null) +
+    `<button type="button" class="del-yaku-btn" onclick="removeYaku('${uid}')">✕</button>`;
+  list.appendChild(div);
+}
+
+function removeYaku(uid) {
+  const el = document.getElementById(uid);
+  if (el) el.remove();
+}
+
+/* ── 行生成 ── */
+function buildRow(i, data) {
+  const D  = data || {};
+  const PR = D.pr  || {};
+  const Y  = D.yaku || {};
+  const ro = READONLY;
+
+  function cb(name, checked) {
+    if (ro) return `<span style="font-size:12px">${checked ? '✓' : '—'}</span>`;
+    return `<input type="checkbox" id="${name}" ${checked ? 'checked' : ''}>`;
+  }
+  function numPts(name, val) {
+    // 局収支・供託点（入力可・100点単位）
+    if (ro) return `<span style="font-family:var(--mono)">${val ?? 0}</span>`;
+    return `<input type="number" id="${name}" value="${val ?? 0}" step="100"
+      class="inp-pts" oninput="recalcAllPoints()">`;
+  }
+  function numPtsRo(name, val) {
+    // 持ち点（入力不可・自動計算）
+    if (ro) return `<span style="font-family:var(--mono);font-weight:700">${val ?? 0}</span>`;
+    return `<input type="number" id="${name}" value="${val ?? 0}"
+      class="inp-pts-ro" readonly tabindex="-1">`;
+  }
+  function numSm(name, val) {
+    if (ro) return `<span style="font-family:var(--mono)">${val ?? 0}</span>`;
+    return `<input type="number" id="${name}" value="${val ?? 0}" class="inp-sm">`;
+  }
+  function selHTML(name, opts, val, cls) {
+    if (ro) { const f = opts.find(o => o[0] == val); return f ? f[1] : '—'; }
+    let s = `<select id="${name}" class="${cls || ''}">`;
+    opts.forEach(([v, l]) => { s += `<option value="${v}" ${v == val ? 'selected' : ''}>${l}</option>`; });
+    return s + '</select>';
+  }
+
+  const roundOpts  = [['', '— 選択 —'], ...ROUNDS.map(r => [String(r.id), r.name])];
+  const agariMOpts = [['', '—'], ['tsumo', 'ツモ'], ['ron', 'ロン']];
+  const ryuOpts    = [['', '—'], ['tenpai', '聴牌'], ['noten', '不聴']];
+
+  let html = `<tr id="row-${i}">`;
+
+  // 局 / 本場
+  html += `<td class="td-base" style="padding:2px 4px">
+    ${selHTML(`round_${i}_master`, roundOpts, String(D.round_master_id || ''), 'sel-round')}
+    ${ro
+      ? `<span style="font-size:10px;margin-left:2px">${D.honba ?? 0}本場</span>`
+      : `<input type="number" id="round_${i}_honba" value="${D.honba ?? 0}"
+           class="inp-sm" style="width:24px"> 本`
+    }
+  </td>`;
+
+  // 供託数
+  html += `<td class="td-base" style="text-align:center">${numSm(`round_${i}_kyotaku`, D.kyotaku ?? 0)}</td>`;
+
+  // 流局
+  html += `<td class="td-base" style="text-align:center">${cb(`round_${i}_ryukyoku`, D.is_ryukyoku)}</td>`;
+
+  // 各座席
+  SEATS.forEach(seat => {
+    const p  = PR[seat] || {};
+    const bg = SEAT_TD[seat];
+    const pf = `round_${i}_${seat}`;
+    html += `
+      <td class="${bg}" style="text-align:center">${cb(`${pf}_agari`, p.is_agari)}</td>
+      <td class="${bg}">${selHTML(`${pf}_agari_method`, agariMOpts, p.agari_method || '', 'sel-state')}</td>
+      <td class="${bg}" style="text-align:center">${cb(`${pf}_houjuu`, p.is_houjuu)}</td>
+      <td class="${bg}" style="text-align:center">${cb(`${pf}_furo`, p.is_furo)}</td>
+      <td class="${bg}" style="text-align:center">${numSm(`${pf}_furo_count`, p.furo_count ?? 0)}</td>
+      <td class="${bg}" style="text-align:center">${cb(`${pf}_riichi`, p.is_riichi)}</td>
+      <td class="${bg}">${selHTML(`${pf}_ryukyoku_state`, ryuOpts, p.ryukyoku_state || '', 'sel-state')}</td>
+      <td class="${bg}" style="text-align:right">${numPts(`${pf}_balance`, p.kyoku_balance ?? 0)}</td>
+      <td class="${bg}" style="text-align:right">${numPts(`${pf}_kyotaku_pts`, p.kyotaku_points ?? 0)}</td>
+      <td class="${bg}" style="text-align:right">${numPtsRo(`${pf}_points_after`, p.points_after ?? 0)}</td>
+    `;
+  });
+
+  // 役セル
+  const yc = 'td-yaku';
+  let agariSel, houjuuSel;
+  if (ro) {
+    agariSel  = Y.agari_user_name  || '—';
+    houjuuSel = Y.houjuu_user_name || '—';
+  } else {
+    agariSel  = `<select id="r${i}_yaku_agari"  class="sel-user"><option value="">—</option></select>`;
+    houjuuSel = `<select id="r${i}_yaku_houjuu" class="sel-user"><option value="">—</option></select>`;
+  }
+
+  html += `
+    <td class="${yc}">${agariSel}</td>
+    <td class="${yc}">${houjuuSel}</td>
+    <td class="${yc}" style="text-align:center">${numSm(`r${i}_yaku_han`,  Y.han      ?? 0)}</td>
+    <td class="${yc}" style="text-align:center">${numSm(`r${i}_yaku_dora`, Y.dora     ?? 0)}</td>
+    <td class="${yc}" style="text-align:center">${numSm(`r${i}_yaku_ura`,  Y.ura_dora ?? 0)}</td>
+    <td class="${yc}" style="text-align:center">${numSm(`r${i}_yaku_aka`,  Y.aka_dora ?? 0)}</td>
+    <td class="${yc}" style="padding:3px 5px;min-width:200px">${yakuCellHTML(i, Y.yaku_ids || [])}</td>
+  `;
+  html += '</tr>';
+  return html;
+}
+
+function addRound(data) {
+  roundCount++;
+  const tbody = document.getElementById('rounds-body');
+  const tmp   = document.createElement('tbody');
+  tmp.innerHTML = buildRow(roundCount, data);
+  tbody.appendChild(tmp.firstChild);
+  if (!READONLY) {
+    refreshMemberSelects(roundCount);
+    // 新規行は持ち点を初期計算
+    SEATS.forEach(seat => calcPointsAfter(roundCount, seat));
+  }
+}
+
+function removeLastRound() {
+  if (!roundCount) return;
+  document.getElementById(`row-${roundCount}`)?.remove();
+  roundCount--;
+}
+
+/* ── フォーム送信 ── */
+function saveForm(finalize) {
+  const fields = document.getElementById('form-fields');
+  fields.innerHTML = '';
+  function h(name, val) {
+    const inp = document.createElement('input');
+    inp.type = 'hidden'; inp.name = name; inp.value = val ?? '';
+    fields.appendChild(inp);
+  }
+
+  const gd = document.getElementById('game_date');
+  if (!gd || !gd.value) {
+    alert('対局日を入力してください。'); return;
+  }
+  let seatOk = true;
+  SEATS.forEach(seat => {
+    const sel = document.getElementById('player_' + seat);
+    if (!sel || !sel.value) seatOk = false;
+  });
+  if (!seatOk) {
+    alert('全座席のユーザを選択してください。'); return;
+  }
+
+  h('game_date', gd.value);
+  SEATS.forEach(seat => {
+    const sel = document.getElementById('player_' + seat);
+    h('player_' + seat, sel ? sel.value : '');
+  });
+  h('round_count', roundCount);
+  if (finalize) h('finalize', '1');
+
+  for (let i = 1; i <= roundCount; i++) {
+    const msel = document.getElementById(`round_${i}_master`);
+    h(`round_${i}_master`, msel ? msel.value : '');
+    const hb = document.getElementById(`round_${i}_honba`);
+    h(`round_${i}_honba`, hb ? hb.value : '0');
+    const ky = document.getElementById(`round_${i}_kyotaku`);
+    h(`round_${i}_kyotaku`, ky ? ky.value : '0');
+    const ry = document.getElementById(`round_${i}_ryukyoku`);
+    h(`round_${i}_ryukyoku`, ry && ry.checked ? '1' : '0');
+
+    SEATS.forEach(seat => {
+      const pf = `round_${i}_${seat}`;
+      ['agari','houjuu','furo','riichi'].forEach(f => {
+        const el = document.getElementById(`${pf}_${f}`);
+        h(`${pf}_${f}`, el && el.checked ? '1' : '0');
+      });
+      ['agari_method','furo_count','balance','kyotaku_pts','points_after','ryukyoku_state'].forEach(f => {
+        const el = document.getElementById(`${pf}_${f}`);
+        h(`${pf}_${f}`, el ? el.value : '');
+      });
+    });
+
+    ['agari','houjuu'].forEach(t => {
+      const el = document.getElementById(`r${i}_yaku_${t}`);
+      h(`round_${i}_yaku_${t}`, el ? el.value : '');
+    });
+    ['han','dora','ura','aka'].forEach(f => {
+      const el = document.getElementById(`r${i}_yaku_${f}`);
+      h(`round_${i}_yaku_${f}`, el ? el.value : '0');
+    });
+    const yakuList = document.getElementById(`yaku-list-${i}`);
+    if (yakuList) {
+      yakuList.querySelectorAll('select').forEach(sel => {
+        if (sel.value) h(`round_${i}_yakus`, sel.value);
+      });
+    }
+  }
+
+  document.getElementById('main-form').submit();
+}
+
+/* ── 初期化 ── */
+window.addEventListener('DOMContentLoaded', () => {
+  if (!READONLY) updateSeatLabels();
+  if (EXISTING && EXISTING.length > 0) {
+    EXISTING.forEach(d => addRound(d));
+  } else if (!READONLY) {
+    addRound();
+  }
+});
+</script>
+{% endblock %}
