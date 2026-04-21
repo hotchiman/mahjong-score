@@ -7,9 +7,7 @@
     <nav class="topbar-nav">
       <a href="{% url 'game_list' %}" class="active">対局一覧</a>
       <a href="{% url 'battle_record' %}">対戦記録</a>
-      {% if request.user.is_superuser %}
-      <a href="{% url 'user_list' %}">ユーザ管理</a>
-      {% endif %}
+      {% if request.user.is_superuser %}<a href="{% url 'user_list' %}">ユーザ管理</a>{% endif %}
       <div class="nav-sep"></div>
       <span class="topbar-user">{{ request.user.username }}</span>
       <a href="{% url 'logout' %}">ログアウト</a>
@@ -19,11 +17,12 @@
     {% for message in messages %}
       <div class="alert alert-{{ message.tags }}">{{ message }}</div>
     {% endfor %}
+
     <div class="page-header">
       <div class="page-header-left">
         <p class="page-eyebrow">麻雀対局管理</p>
         <h1 class="page-title">対局一覧</h1>
-        <p class="count-badge">{{ rooms|length }} 件</p>
+        <p class="count-badge">{{ rooms_with_stats|length }} 件</p>
       </div>
       <div style="display:flex;gap:10px">
         <a href="{% url 'battle_record' %}" class="btn btn-ghost">対戦記録</a>
@@ -31,37 +30,45 @@
       </div>
     </div>
 
-    {% if rooms %}
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>対局名</th><th>ルール</th><th>対局数</th><th>参加者</th><th>作成者</th><th>対局結果</th><th>操作</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for room in rooms %}
-        <tr>
-          <td><a href="{% url 'game_result_list' room.id %}" class="link">{{ room.name }}</a></td>
-          <td><span class="badge badge-rule">{{ room.rule.name }}</span></td>
-          <td style="font-family:var(--mono);font-size:12px;text-align:center">{{ room.game_count }}</td>
-          <td style="font-family:var(--mono);font-size:12px;text-align:center">{{ room.members.count }} 名</td>
-          <td style="font-size:12px;color:var(--ink-muted)">{{ room.created_by.username }}</td>
-          <td style="font-size:12px;color:var(--ink-muted)">—</td>
-          <td>
-            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-              <a href="{% url 'game_join' room.invite_token %}" class="btn btn-ghost btn-sm">参加</a>
-              <button class="btn btn-ghost btn-sm"
-                onclick="copyInviteLink('{{ request.scheme }}://{{ request.get_host }}{% url "game_join" room.invite_token %}')"
-                title="招待リンクをコピー">招待</button>
-              {% if request.user.is_superuser %}
-              <a href="{% url 'game_delete' room.id %}" class="btn btn-danger btn-sm">削除</a>
-              {% endif %}
-            </div>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    {% if rooms_with_stats %}
+    <div class="room-list">
+      {% for item in rooms_with_stats %}
+      {% with room=item.room %}
+      <div class="room-card" onclick="location.href='{% url 'game_result_list' room.id %}'">
+
+        <!-- 上段：対局名 + 招待ボタン | 右端：合計pts -->
+        <div class="rc-top">
+          <div class="rc-left">
+            <span class="rc-name">{{ room.name }}</span>
+            <span class="rc-count">（全{{ room.game_count }}戦）</span>
+            <button class="rc-invite-btn"
+              onclick="event.stopPropagation(); copyInviteLink('{{ request.scheme }}://{{ request.get_host }}{% url 'game_join' room.invite_token %}')"
+              title="招待リンクをコピー">招待</button>
+          </div>
+          <div class="rc-pts {% if item.total_pts is not None %}{% if item.total_pts >= 0 %}pts-pos{% else %}pts-neg{% endif %}{% else %}pts-none{% endif %}">
+            {% if item.total_pts is not None %}
+              {% if item.total_pts >= 0 %}+{{ item.total_pts|floatformat:1 }}{% else %}▲{{ item.total_pts|floatformat:1|slice:"1:" }}{% endif %}
+            {% else %}—{% endif %}
+          </div>
+        </div>
+
+        <!-- 下段：平均着順 / 消化対局数 | 右端：ルール名 -->
+        <div class="rc-bottom">
+          <div class="rc-sub">
+            {% if item.avg_rank %}{{ item.avg_rank }} 位 / {% endif %}{{ item.finalized_count }} / {{ room.game_count }} 戦
+          </div>
+          <div class="rc-rule">{{ room.rule.name }}</div>
+        </div>
+
+        {% if request.user.is_superuser %}
+        <a href="{% url 'game_delete' room.id %}"
+           onclick="event.stopPropagation()"
+           class="rc-del-btn" title="対局ルームを削除">✕</a>
+        {% endif %}
+      </div>
+      {% endwith %}
+      {% endfor %}
+    </div>
     {% else %}
     <div class="empty-state">
       <div class="empty-state-icon">🀄</div>
@@ -72,15 +79,123 @@
   </main>
 </div>
 
+<style>
+.pts-pos  { color:var(--teal); }
+.pts-neg  { color:var(--accent); }
+.pts-none { color:var(--ink-muted); }
+
+/* リストコンテナ */
+.room-list {
+  display:flex;
+  flex-direction:column;
+  gap:0;
+  max-width:760px;
+  background:white;
+  border:1px solid var(--border);
+  border-radius:6px;
+  overflow:hidden;
+  box-shadow:var(--shadow);
+}
+
+/* カード1枚 */
+.room-card {
+  position:relative;
+  padding:14px 20px;
+  border-bottom:1px solid var(--border);
+  cursor:pointer;
+  transition:background 0.12s;
+}
+.room-card:last-child { border-bottom:none; }
+.room-card:hover { background:var(--paper-warm); }
+
+/* 上段 */
+.rc-top {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:4px;
+}
+.rc-left {
+  display:flex;
+  align-items:center;
+  gap:6px;
+  flex-wrap:wrap;
+}
+.rc-name {
+  font-size:15px;
+  font-weight:700;
+  color:var(--ink);
+}
+.rc-count {
+  font-size:13px;
+  color:var(--ink-muted);
+}
+.rc-invite-btn {
+  font-size:11px;
+  padding:2px 10px;
+  background:transparent;
+  border:1px solid var(--border);
+  border-radius:3px;
+  cursor:pointer;
+  color:var(--ink-soft);
+  font-family:var(--sans);
+  transition:background 0.12s;
+  white-space:nowrap;
+}
+.rc-invite-btn:hover { background:var(--border); }
+
+.rc-pts {
+  font-family:var(--mono);
+  font-size:18px;
+  font-weight:700;
+  letter-spacing:0.01em;
+  white-space:nowrap;
+}
+
+/* 下段 */
+.rc-bottom {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.rc-sub {
+  font-size:12px;
+  color:var(--ink-muted);
+  font-family:var(--mono);
+}
+.rc-rule {
+  font-size:12px;
+  color:var(--ink-muted);
+}
+
+/* 削除ボタン（スーパーユーザ専用） */
+.rc-del-btn {
+  position:absolute;
+  top:8px;
+  right:8px;
+  font-size:10px;
+  padding:1px 5px;
+  color:var(--accent);
+  border:1px solid var(--accent);
+  border-radius:3px;
+  text-decoration:none;
+  background:transparent;
+  opacity:0;
+  transition:opacity 0.15s, background 0.15s;
+}
+.room-card:hover .rc-del-btn { opacity:1; }
+.rc-del-btn:hover { background:var(--error-bg); }
+</style>
+
 <div id="toast" style="position:fixed;bottom:24px;right:24px;background:var(--ink);color:var(--paper);padding:12px 20px;border-radius:var(--radius);font-size:13px;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:9999">
   招待リンクをコピーしました
 </div>
 <script>
 function copyInviteLink(url) {
   navigator.clipboard.writeText(url).then(() => {
-    const toast = document.getElementById('toast');
-    toast.style.opacity = '1';
-    setTimeout(() => { toast.style.opacity = '0'; }, 2500);
+    const t = document.getElementById('toast');
+    t.style.opacity = '1';
+    setTimeout(() => { t.style.opacity = '0'; }, 2500);
   }).catch(() => { prompt('招待リンクをコピーしてください:', url); });
 }
 </script>

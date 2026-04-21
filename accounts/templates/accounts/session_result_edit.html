@@ -1,0 +1,63 @@
+{% extends "accounts/base.html" %}
+{% block title %}対局結果編集 — {{ room.name }}{% endblock %}
+{% block body %}
+<div class="app-shell">
+  <header class="topbar">
+    <a href="{% url 'game_list' %}" class="topbar-brand">🀄 MJS</a>
+    <nav class="topbar-nav">
+      <a href="{% url 'game_list' %}">対局一覧</a>
+      <a href="{% url 'game_result_list' room.id %}" class="active">対局結果</a>
+      <div class="nav-sep"></div>
+      <span class="topbar-user">{{ request.user.username }}</span>
+      <a href="{% url 'logout' %}">ログアウト</a>
+    </nav>
+  </header>
+  <main class="page-main">
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+    <div class="page-header">
+      <div class="page-header-left">
+        <p class="page-eyebrow">確定済み結果の編集</p>
+        <h1 class="page-title">対局結果編集</h1>
+      </div>
+    </div>
+
+    <div class="card" style="max-width:560px">
+      <p style="font-size:13px;color:var(--ink-muted);margin-bottom:20px">
+        対局{{ session.session_number }}（{{ session.game_date }}）の着順・獲得ptsを手動で修正できます。
+      </p>
+      <form method="post">
+        {% csrf_token %}
+        <table class="data-table" style="margin-bottom:20px">
+          <thead>
+            <tr><th>座席</th><th>ユーザ名</th><th>最終持ち点</th><th>着順</th><th>獲得pts</th></tr>
+          </thead>
+          <tbody>
+            {% for gr in results %}
+            <tr>
+              <td>{{ gr.get_seat_display }}</td>
+              <td><strong>{{ gr.user.username }}</strong></td>
+              <td style="font-family:var(--mono);text-align:right">{{ gr.final_points|floatformat:0 }}点</td>
+              <td>
+                <select name="rank_{{ gr.id }}" style="width:60px;font-size:13px;padding:4px">
+                  {% for r in "1234" %}<option value="{{ r }}" {% if gr.rank == r|add:0 %}selected{% endif %}>{{ r }}着</option>{% endfor %}
+                </select>
+              </td>
+              <td>
+                <input type="number" name="pts_{{ gr.id }}" value="{{ gr.pts }}"
+                  step="0.1" style="width:80px;font-size:13px;padding:4px 6px;border:1px solid var(--border);border-radius:2px;font-family:var(--mono)">
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-accent">更新する</button>
+          <a href="{% url 'game_result_list' room.id %}" class="btn btn-ghost">キャンセル</a>
+        </div>
+      </form>
+    </div>
+  </main>
+</div>
+{% endblock %}

@@ -8,11 +8,43 @@ import uuid
 #  既存モデル
 # ─────────────────────────────────────────────
 
+KYOTAKU_HANDLING_CHOICES = [
+    ('top_split',    'トップ取り（分け）'),
+    ('top_east',     'トップ取り（起家優先）'),
+    ('carryover',    '持ち越し'),
+]
+
+DRAW_HANDLING_CHOICES = [
+    ('split_east',   '分け（端数起家優先）'),
+    ('split',        '分け'),
+    ('east_priority','起家優先'),
+]
+
 class MahjongRule(models.Model):
     """対局ルールマスタ"""
-    name = models.CharField('ルール名', max_length=100)
-    detail = models.TextField('ルール詳細')
-    order = models.PositiveIntegerField('表示順', default=0)
+    name    = models.CharField('ルール名', max_length=100)
+    order   = models.PositiveIntegerField('表示順', default=0)
+
+    # 点数設定
+    init_points   = models.IntegerField('初期持ち点', default=25000)
+    return_points = models.IntegerField('終局時返し点', default=30000)
+
+    # 順位ウマ
+    uma1 = models.IntegerField('順位ウマ1（1着）', default=20)
+    uma2 = models.IntegerField('順位ウマ2（2着）', default=0)
+    uma3 = models.IntegerField('順位ウマ3（3着）', default=0)
+    uma4 = models.IntegerField('順位ウマ4（4着）', default=-20)
+
+    # 終局時供託の扱い
+    kyotaku_handling = models.CharField(
+        '終局時供託の扱い', max_length=20,
+        choices=KYOTAKU_HANDLING_CHOICES, default='top_split'
+    )
+    # 同点の扱い
+    draw_handling = models.CharField(
+        '同点の扱い', max_length=20,
+        choices=DRAW_HANDLING_CHOICES, default='split_east'
+    )
 
     class Meta:
         ordering = ['order']
@@ -21,6 +53,18 @@ class MahjongRule(models.Model):
 
     def __str__(self):
         return self.name
+
+    def get_uma(self, rank):
+        return [self.uma1, self.uma2, self.uma3, self.uma4][rank - 1]
+
+    def accordion_text(self):
+        """アコーディオン表示テキスト"""
+        uma_str = f'{abs(self.uma2)}-{self.uma1}'
+        return (
+            f'基本ルール：{self.init_points:,}点持ち{self.return_points:,}点返し、{uma_str}\n'
+            f'終局時供託の扱い：{self.get_kyotaku_handling_display()}\n'
+            f'同点の扱い：{self.get_draw_handling_display()}'
+        )
 
 
 class GameRoom(models.Model):

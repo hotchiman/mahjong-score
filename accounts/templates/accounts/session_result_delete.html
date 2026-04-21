@@ -1,0 +1,40 @@
+{% extends "accounts/base.html" %}
+{% block title %}対局データ削除{% endblock %}
+{% block body %}
+<div class="app-shell">
+  <header class="topbar">
+    <a href="{% url 'game_list' %}" class="topbar-brand">🀄 MJS</a>
+    <nav class="topbar-nav">
+      <a href="{% url 'game_list' %}">対局一覧</a>
+      <a href="{% url 'game_result_list' room.id %}" class="active">対局結果</a>
+      <div class="nav-sep"></div>
+      <span class="topbar-user">{{ request.user.username }}</span>
+      <a href="{% url 'logout' %}">ログアウト</a>
+    </nav>
+  </header>
+  <main class="page-main">
+    <div class="page-header">
+      <div class="page-header-left">
+        <p class="page-eyebrow">削除確認</p>
+        <h1 class="page-title">対局データ削除</h1>
+      </div>
+    </div>
+    <div style="max-width:480px">
+      <div class="danger-zone">
+        <h3>⚠ この操作は取り消せません</h3>
+        <p>
+          <strong>{{ room.name }} — 対局{{ session.session_number }}</strong>（{{ session.game_date }}）の<br>
+          すべての対局データ（局結果・役記録・確定結果）を削除します。
+        </p>
+        <form method="post">
+          {% csrf_token %}
+          <div style="display:flex;gap:12px">
+            <button type="submit" class="btn btn-accent">削除する</button>
+            <a href="{% url 'game_result_list' room.id %}" class="btn btn-ghost">キャンセル</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+{% endblock %}

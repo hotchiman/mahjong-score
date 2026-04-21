@@ -67,9 +67,9 @@
             {% with pts=session|get_pts:seat_key rank=session|get_rank:seat_key %}
             <div style="margin-top:5px;font-family:var(--mono);font-size:12px;font-weight:700">
               {% if rank %}{{ rank }}着　{% endif %}
-              <span class="{% if pts >= 0 %}pts-pos{% else %}pts-neg{% endif %}">
+              <span class="{% if pts >= 0 %}pts-pos{% else %}pts-neg{% endif %}" style="font-size:16px;font-weight:700">
                 {% if pts >= 0 %}+{{ pts }}{% else %}▲{{ pts|floatformat:1|slice:"1:" }}{% endif %}
-              </span> pts
+              </span> <span style="font-size:13px">pts</span>
             </div>
             {% endwith %}
           {% endif %}
@@ -79,17 +79,14 @@
     </div>
 
     <!-- ── アクションボタン ── -->
-    {% if not readonly %}
     <div style="display:flex;gap:10px;margin-bottom:14px;align-items:center;flex-wrap:wrap">
+      <a href="{% url 'game_result_list' room.id %}" class="btn btn-ghost">← 一覧に戻る</a>
+      {% if not readonly %}
       <button type="button" class="btn btn-primary" onclick="saveForm(false)">保存</button>
       <button type="button" class="btn btn-accent" onclick="saveForm(true)">対局確定</button>
       <span style="font-size:11px;color:var(--ink-muted)">対局確定：全局入力後に押下。最終持ち点から獲得ptsを算出します。</span>
+      {% endif %}
     </div>
-    {% else %}
-    <div style="margin-bottom:14px">
-      <a href="{% url 'game_result_list' room.id %}" class="btn btn-ghost">← 対局結果一覧に戻る</a>
-    </div>
-    {% endif %}
 
     <!-- ── 局テーブル（横スクロール） ── -->
     <div style="overflow-x:auto;border:1px solid #bbb">
@@ -136,6 +133,9 @@
       <button type="button" class="btn btn-ghost btn-sm" onclick="addRound()">＋ 局を追加</button>
       <button type="button" class="btn btn-danger btn-sm" onclick="removeLastRound()">最終局を削除</button>
     </div>
+    <p style="margin-top:10px;font-size:12px;color:var(--ink-muted);border-left:3px solid var(--border);padding-left:10px">
+      終局時に残った供託がトップ取りの場合、オーラスの供託点に追加してください。
+    </p>
     {% endif %}
 
     <form id="main-form" method="post" action="">
@@ -212,8 +212,14 @@
   font-size:10px; padding:2px 2px;
   border:1px solid #bbb; border-radius:1px; background:transparent;
 }
-/* 局名セレクト */
-select.sel-round { max-width:58px; }
+/* 局名セレクト（東1〜西4、2文字分） */
+select.sel-round { max-width:40px; width:40px; }
+/* 本場入力（2文字分） */
+#rounds-table input[type="number"].inp-honba {
+  width:34px; font-size:11px; padding:2px 2px;
+  border:1px solid #bbb; border-radius:1px;
+  text-align:right; background:transparent; font-family:var(--mono);
+}
 /* 和了状態・流局状態 */
 select.sel-state { max-width:62px; }
 /* 和了者・放銃者 */
@@ -245,7 +251,7 @@ const ROUNDS   = {{ rounds_json|safe }};
 const YAKUS    = {{ yakus_json|safe }};
 const READONLY = {{ readonly_json|safe }};
 const EXISTING = {{ existing_rounds_json|default_if_none:"null"|safe }};
-const INIT_PTS = 25000;
+const INIT_PTS = {{ init_points|default:25000 }};
 
 let roundCount = 0;
 
@@ -288,15 +294,15 @@ function calcPointsAfter(rowIdx, seat) {
   const ptEl   = document.getElementById(`${pf}_points_after`);
   if (!ptEl) return;
 
-  const bal = parseInt(balEl ? balEl.value : 0) || 0;
-  const kyo = parseInt(kyoEl ? kyoEl.value : 0) || 0;
+  const bal = parseInt(balEl ? (balEl.value || 0) : 0) || 0;
+  const kyo = parseInt(kyoEl ? (kyoEl.value || 0) : 0) || 0;
 
   let base;
   if (rowIdx === 1) {
     base = INIT_PTS;
   } else {
     const prevPtEl = document.getElementById(`round_${rowIdx - 1}_${seat}_points_after`);
-    base = parseInt(prevPtEl ? prevPtEl.value : INIT_PTS) || INIT_PTS;
+    base = parseInt(prevPtEl ? (prevPtEl.value || INIT_PTS) : INIT_PTS) || INIT_PTS;
   }
   ptEl.value = base + bal + kyo;
 }
@@ -305,6 +311,22 @@ function recalcAllPoints() {
   for (let i = 1; i <= roundCount; i++) {
     SEATS.forEach(seat => calcPointsAfter(i, seat));
   }
+}
+
+/* 新規行追加時に持ち点のデフォルト値をセット */
+function initPointsAfterForRow(rowIdx) {
+  SEATS.forEach(seat => {
+    const ptEl = document.getElementById(`round_${rowIdx}_${seat}_points_after`);
+    if (!ptEl || ptEl.value !== '') return; // 既存データがある場合はスキップ
+    let base;
+    if (rowIdx === 1) {
+      base = INIT_PTS;
+    } else {
+      const prevPtEl = document.getElementById(`round_${rowIdx - 1}_${seat}_points_after`);
+      base = parseInt(prevPtEl ? (prevPtEl.value || INIT_PTS) : INIT_PTS) || INIT_PTS;
+    }
+    ptEl.value = base;
+  });
 }
 
 /* ── 役セル ── */
@@ -362,26 +384,31 @@ function buildRow(i, data) {
   const PR = D.pr  || {};
   const Y  = D.yaku || {};
   const ro = READONLY;
+  const isExisting = data != null && Object.keys(data).length > 0;
 
   function cb(name, checked) {
     if (ro) return `<span style="font-size:12px">${checked ? '✓' : '—'}</span>`;
     return `<input type="checkbox" id="${name}" ${checked ? 'checked' : ''}>`;
   }
   function numPts(name, val) {
-    // 局収支・供託点（入力可・100点単位）
     if (ro) return `<span style="font-family:var(--mono)">${val ?? 0}</span>`;
-    return `<input type="number" id="${name}" value="${val ?? 0}" step="100"
-      class="inp-pts" oninput="recalcAllPoints()">`;
+    const v = (isExisting && val != null) ? val : '';
+    return `<input type="number" id="${name}" value="${v}" step="100" placeholder="0" class="inp-pts" oninput="recalcAllPoints()">`;
   }
   function numPtsRo(name, val) {
-    // 持ち点（入力不可・自動計算）
     if (ro) return `<span style="font-family:var(--mono);font-weight:700">${val ?? 0}</span>`;
-    return `<input type="number" id="${name}" value="${val ?? 0}"
-      class="inp-pts-ro" readonly tabindex="-1">`;
+    const v = (isExisting && val != null) ? val : '';
+    return `<input type="number" id="${name}" value="${v}" class="inp-pts-ro" readonly tabindex="-1">`;
   }
   function numSm(name, val) {
     if (ro) return `<span style="font-family:var(--mono)">${val ?? 0}</span>`;
-    return `<input type="number" id="${name}" value="${val ?? 0}" class="inp-sm">`;
+    const v = (isExisting && val != null) ? val : '';
+    return `<input type="number" id="${name}" value="${v}" placeholder="0" class="inp-sm">`;
+  }
+  function numHonba(name, val) {
+    if (ro) return `<span style="font-size:10px">${val ?? 0}本場</span>`;
+    const v = (isExisting && val != null) ? val : '';
+    return `<input type="number" id="${name}" value="${v}" placeholder="0" class="inp-honba">`;
   }
   function selHTML(name, opts, val, cls) {
     if (ro) { const f = opts.find(o => o[0] == val); return f ? f[1] : '—'; }
@@ -390,29 +417,21 @@ function buildRow(i, data) {
     return s + '</select>';
   }
 
-  const roundOpts  = [['', '— 選択 —'], ...ROUNDS.map(r => [String(r.id), r.name])];
+  const roundOpts  = [['', '選択'], ...ROUNDS.map(r => [String(r.id), r.name])];
   const agariMOpts = [['', '—'], ['tsumo', 'ツモ'], ['ron', 'ロン']];
   const ryuOpts    = [['', '—'], ['tenpai', '聴牌'], ['noten', '不聴']];
 
   let html = `<tr id="row-${i}">`;
 
-  // 局 / 本場
-  html += `<td class="td-base" style="padding:2px 4px">
-    ${selHTML(`round_${i}_master`, roundOpts, String(D.round_master_id || ''), 'sel-round')}
-    ${ro
-      ? `<span style="font-size:10px;margin-left:2px">${D.honba ?? 0}本場</span>`
-      : `<input type="number" id="round_${i}_honba" value="${D.honba ?? 0}"
-           class="inp-sm" style="width:24px"> 本`
-    }
+  // 局選択局 本場数本場
+  html += `<td class="td-base" style="padding:2px 3px;white-space:nowrap">
+    ${selHTML(`round_${i}_master`, roundOpts, String(D.round_master_id || ''), 'sel-round')}局
+    ${numHonba(`round_${i}_honba`, D.honba)}本場
   </td>`;
 
-  // 供託数
-  html += `<td class="td-base" style="text-align:center">${numSm(`round_${i}_kyotaku`, D.kyotaku ?? 0)}</td>`;
-
-  // 流局
+  html += `<td class="td-base" style="text-align:center">${numSm(`round_${i}_kyotaku`, isExisting ? D.kyotaku : null)}</td>`;
   html += `<td class="td-base" style="text-align:center">${cb(`round_${i}_ryukyoku`, D.is_ryukyoku)}</td>`;
 
-  // 各座席
   SEATS.forEach(seat => {
     const p  = PR[seat] || {};
     const bg = SEAT_TD[seat];
@@ -422,16 +441,15 @@ function buildRow(i, data) {
       <td class="${bg}">${selHTML(`${pf}_agari_method`, agariMOpts, p.agari_method || '', 'sel-state')}</td>
       <td class="${bg}" style="text-align:center">${cb(`${pf}_houjuu`, p.is_houjuu)}</td>
       <td class="${bg}" style="text-align:center">${cb(`${pf}_furo`, p.is_furo)}</td>
-      <td class="${bg}" style="text-align:center">${numSm(`${pf}_furo_count`, p.furo_count ?? 0)}</td>
+      <td class="${bg}" style="text-align:center">${numSm(`${pf}_furo_count`, isExisting ? p.furo_count : null)}</td>
       <td class="${bg}" style="text-align:center">${cb(`${pf}_riichi`, p.is_riichi)}</td>
       <td class="${bg}">${selHTML(`${pf}_ryukyoku_state`, ryuOpts, p.ryukyoku_state || '', 'sel-state')}</td>
-      <td class="${bg}" style="text-align:right">${numPts(`${pf}_balance`, p.kyoku_balance ?? 0)}</td>
-      <td class="${bg}" style="text-align:right">${numPts(`${pf}_kyotaku_pts`, p.kyotaku_points ?? 0)}</td>
-      <td class="${bg}" style="text-align:right">${numPtsRo(`${pf}_points_after`, p.points_after ?? 0)}</td>
+      <td class="${bg}" style="text-align:right">${numPts(`${pf}_balance`, isExisting ? p.kyoku_balance : null)}</td>
+      <td class="${bg}" style="text-align:right">${numPts(`${pf}_kyotaku_pts`, isExisting ? p.kyotaku_points : null)}</td>
+      <td class="${bg}" style="text-align:right;font-family:var(--mono);font-weight:700">${numPtsRo(`${pf}_points_after`, isExisting ? p.points_after : null)}</td>
     `;
   });
 
-  // 役セル
   const yc = 'td-yaku';
   let agariSel, houjuuSel;
   if (ro) {
@@ -445,10 +463,10 @@ function buildRow(i, data) {
   html += `
     <td class="${yc}">${agariSel}</td>
     <td class="${yc}">${houjuuSel}</td>
-    <td class="${yc}" style="text-align:center">${numSm(`r${i}_yaku_han`,  Y.han      ?? 0)}</td>
-    <td class="${yc}" style="text-align:center">${numSm(`r${i}_yaku_dora`, Y.dora     ?? 0)}</td>
-    <td class="${yc}" style="text-align:center">${numSm(`r${i}_yaku_ura`,  Y.ura_dora ?? 0)}</td>
-    <td class="${yc}" style="text-align:center">${numSm(`r${i}_yaku_aka`,  Y.aka_dora ?? 0)}</td>
+    <td class="${yc}" style="text-align:center">${numSm(`r${i}_yaku_han`,  isExisting ? Y.han : null)}</td>
+    <td class="${yc}" style="text-align:center">${numSm(`r${i}_yaku_dora`, isExisting ? Y.dora : null)}</td>
+    <td class="${yc}" style="text-align:center">${numSm(`r${i}_yaku_ura`,  isExisting ? Y.ura_dora : null)}</td>
+    <td class="${yc}" style="text-align:center">${numSm(`r${i}_yaku_aka`,  isExisting ? Y.aka_dora : null)}</td>
     <td class="${yc}" style="padding:3px 5px;min-width:200px">${yakuCellHTML(i, Y.yaku_ids || [])}</td>
   `;
   html += '</tr>';
@@ -463,8 +481,13 @@ function addRound(data) {
   tbody.appendChild(tmp.firstChild);
   if (!READONLY) {
     refreshMemberSelects(roundCount);
-    // 新規行は持ち点を初期計算
-    SEATS.forEach(seat => calcPointsAfter(roundCount, seat));
+    if (data && Object.keys(data).length > 0) {
+      // 既存データ：持ち点を再計算
+      SEATS.forEach(seat => calcPointsAfter(roundCount, seat));
+    } else {
+      // 新規行：デフォルト持ち点をセット
+      initPointsAfterForRow(roundCount);
+    }
   }
 }
 
@@ -485,16 +508,27 @@ function saveForm(finalize) {
   }
 
   const gd = document.getElementById('game_date');
-  if (!gd || !gd.value) {
-    alert('対局日を入力してください。'); return;
-  }
+  if (!gd || !gd.value) { alert('対局日を入力してください。'); return; }
   let seatOk = true;
   SEATS.forEach(seat => {
     const sel = document.getElementById('player_' + seat);
     if (!sel || !sel.value) seatOk = false;
   });
-  if (!seatOk) {
-    alert('全座席のユーザを選択してください。'); return;
+  if (!seatOk) { alert('全座席のユーザを選択してください。'); return; }
+
+  // 確定時：持ち点合計チェック → 確認ダイアログ
+  if (finalize && roundCount > 0) {
+    let totalFinal = 0;
+    SEATS.forEach(seat => {
+      const el = document.getElementById(`round_${roundCount}_${seat}_points_after`);
+      totalFinal += parseInt((el && el.value) ? el.value : 0) || 0;
+    });
+    const expected = INIT_PTS * 4;
+    if (totalFinal !== expected) {
+      const ok = confirm(`最終持ち点の合計が${totalFinal.toLocaleString()}点です（正常値：${expected.toLocaleString()}点）。\n確定してよろしいでしょうか。`);
+      if (!ok) return;
+      h('point_sum_confirmed', '1');
+    }
   }
 
   h('game_date', gd.value);
@@ -509,9 +543,9 @@ function saveForm(finalize) {
     const msel = document.getElementById(`round_${i}_master`);
     h(`round_${i}_master`, msel ? msel.value : '');
     const hb = document.getElementById(`round_${i}_honba`);
-    h(`round_${i}_honba`, hb ? hb.value : '0');
+    h(`round_${i}_honba`, hb ? (hb.value || '0') : '0');
     const ky = document.getElementById(`round_${i}_kyotaku`);
-    h(`round_${i}_kyotaku`, ky ? ky.value : '0');
+    h(`round_${i}_kyotaku`, ky ? (ky.value || '0') : '0');
     const ry = document.getElementById(`round_${i}_ryukyoku`);
     h(`round_${i}_ryukyoku`, ry && ry.checked ? '1' : '0');
 
@@ -521,9 +555,13 @@ function saveForm(finalize) {
         const el = document.getElementById(`${pf}_${f}`);
         h(`${pf}_${f}`, el && el.checked ? '1' : '0');
       });
-      ['agari_method','furo_count','balance','kyotaku_pts','points_after','ryukyoku_state'].forEach(f => {
+      ['agari_method','ryukyoku_state'].forEach(f => {
         const el = document.getElementById(`${pf}_${f}`);
         h(`${pf}_${f}`, el ? el.value : '');
+      });
+      ['furo_count','balance','kyotaku_pts','points_after'].forEach(f => {
+        const el = document.getElementById(`${pf}_${f}`);
+        h(`${pf}_${f}`, el ? (el.value || '0') : '0');
       });
     });
 
@@ -533,7 +571,7 @@ function saveForm(finalize) {
     });
     ['han','dora','ura','aka'].forEach(f => {
       const el = document.getElementById(`r${i}_yaku_${f}`);
-      h(`round_${i}_yaku_${f}`, el ? el.value : '0');
+      h(`round_${i}_yaku_${f}`, el ? (el.value || '0') : '0');
     });
     const yakuList = document.getElementById(`yaku-list-${i}`);
     if (yakuList) {
@@ -551,6 +589,20 @@ window.addEventListener('DOMContentLoaded', () => {
   if (!READONLY) updateSeatLabels();
   if (EXISTING && EXISTING.length > 0) {
     EXISTING.forEach(d => addRound(d));
+    // EXISTING読み込み後に和了者・放銃者selectを更新（保存済みの値を復元）
+    if (!READONLY) {
+      for (let i = 1; i <= roundCount; i++) refreshMemberSelects(i);
+      // 保存済みの和了者・放銃者の値を復元
+      EXISTING.forEach((d, idx) => {
+        const ri = idx + 1;
+        const y  = d.yaku;
+        if (!y) return;
+        const agariSel  = document.getElementById(`r${ri}_yaku_agari`);
+        const houjuuSel = document.getElementById(`r${ri}_yaku_houjuu`);
+        if (agariSel  && y.agari_user_id)  agariSel.value  = String(y.agari_user_id);
+        if (houjuuSel && y.houjuu_user_id) houjuuSel.value = String(y.houjuu_user_id);
+      });
+    }
   } else if (!READONLY) {
     addRound();
   }

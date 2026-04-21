@@ -7,28 +7,31 @@
     <nav class="topbar-nav">
       <a href="{% url 'game_list' %}">対局一覧</a>
       <a href="{% url 'battle_record' %}" class="active">対戦記録</a>
-      <a href="{% url 'user_list' %}">ユーザ管理</a>
+      {% if request.user.is_superuser %}<a href="{% url 'user_list' %}">ユーザ管理</a>{% endif %}
       <div class="nav-sep"></div>
       <span class="topbar-user">{{ request.user.username }}</span>
       <a href="{% url 'logout' %}">ログアウト</a>
     </nav>
   </header>
-  <main class="page-main">
-    <div class="page-header">
+  <main class="page-main" style="max-width:100%;padding:32px 24px">
+    <div class="page-header" style="max-width:960px">
       <div class="page-header-left">
         <p class="page-eyebrow">統計</p>
         <h1 class="page-title">対戦記録</h1>
       </div>
     </div>
 
-    <!-- 検索条件 -->
-    <form method="get" class="card" style="margin-bottom:28px;padding:20px 24px">
+    <!-- 検索フォーム -->
+    <form method="get" style="max-width:860px;background:white;border:1px solid var(--border);padding:20px 24px;border-radius:4px;margin-bottom:28px;box-shadow:var(--shadow)">
       <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end">
         <div class="form-group" style="margin:0;min-width:160px">
           <label for="user_id">ユーザ名</label>
           <select id="user_id" name="user_id">
             <option value="">— 選択 —</option>
-            {% for u in users %}<option value="{{ u.id }}" {% if sel_user_id == u.id|stringformat:"s" %}selected{% endif %}>{{ u.username }}</option>{% endfor %}
+            <option value="all" {% if sel_user_id == 'all' %}selected{% endif %}>All Players</option>
+            {% for u in users %}
+            <option value="{{ u.id }}" {% if sel_user_id == u.id|stringformat:"s" %}selected{% endif %}>{{ u.username }}</option>
+            {% endfor %}
           </select>
         </div>
         <div class="form-group" style="margin:0;min-width:200px">
@@ -49,12 +52,121 @@
       </div>
     </form>
 
-    {% if target_user and stats %}
-    <h2 style="font-size:17px;font-weight:700;margin-bottom:20px;padding-bottom:10px;border-bottom:2px solid var(--ink)">
+    {% if error_msg %}
+    <div class="alert alert-error" style="max-width:860px">{{ error_msg }}</div>
+    {% endif %}
+
+    <!-- ── All Players 一覧テーブル ── -->
+    {% if all_players and all_stats %}
+    {% with room_name=rooms|dictsort:"id"|first %}
+    <div style="margin-bottom:12px">
+      <h2 style="font-size:16px;font-weight:700;color:var(--ink)">
+        {% for r in rooms %}{% if r.id|stringformat:"s" == sel_room_id %}{{ r.name }}{% endif %}{% endfor %}
+        {% for r in rules %}{% if r.id|stringformat:"s" == sel_rule_id %}{{ r.name }}{% endif %}{% endfor %}
+        の対戦記録
+      </h2>
+    </div>
+    {% endwith %}
+
+    <div style="overflow-x:auto">
+      <table class="all-table">
+        <thead>
+          <tr>
+            <th class="col-no">#</th>
+            <th class="col-name">選手名</th>
+            <th class="col-num">対戦数</th>
+            <th class="col-pts">ポイント</th>
+            <th class="col-num">平均<br>スコア</th>
+            <th class="col-pct">和了率</th>
+            <th class="col-pct">放銃率</th>
+            <th class="col-pct">立直率</th>
+            <th class="col-pct">副露率</th>
+            <th class="col-pct">参加率</th>
+            <th class="col-num">平均<br>和了</th>
+            <th class="col-num">平均<br>放銃</th>
+            <th class="col-num">平均<br>順位</th>
+            <th class="col-pct">トップ率</th>
+            <th class="col-pct">4着<br>回避率</th>
+            <th class="col-pct">ツモ率</th>
+            <th class="col-pct">ダマ率</th>
+            <th class="col-pct">流局率</th>
+            <th class="col-pct">流局<br>聴牌率</th>
+            <th class="col-pct">立直<br>和了率</th>
+            <th class="col-pct">立直<br>放銃率</th>
+            <th class="col-num">立直<br>収支</th>
+            <th class="col-num">立直<br>収入</th>
+            <th class="col-num">立直<br>支出</th>
+            <th class="col-pct">立直<br>流局率</th>
+            <th class="col-pct">一発率</th>
+            <th class="col-pct">裏ドラ率</th>
+            <th class="col-num">打点<br>効率</th>
+            <th class="col-num">銃点<br>損失</th>
+            <th class="col-num">調整<br>打点効率</th>
+            <th class="col-num">局収支</th>
+            <th class="col-num">総局数</th>
+            <th class="col-dist">着順分布</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in all_stats %}
+          <tr class="{% cycle 'tr-odd' 'tr-even' %}">
+            <td class="col-no td-center">{{ s.rank_no }}</td>
+            <td class="col-name">
+              <a href="{% url 'battle_record' %}?user_id={{ s.user.id }}&room_id={{ sel_room_id }}&rule_id={{ sel_rule_id }}"
+                 class="player-link">{{ s.user.username }}</a>
+            </td>
+            <td class="td-right">{{ s.battle_count }}</td>
+            <td class="td-right {% if s.total_pts is not None %}{% if s.total_pts >= 0 %}pts-pos{% else %}pts-neg{% endif %}{% endif %}" style="font-weight:700">
+              {% if s.total_pts is not None %}
+                {% if s.total_pts >= 0 %}+{{ s.total_pts|floatformat:1 }}{% else %}▲{{ s.total_pts|floatformat:1|slice:"1:" }}{% endif %}
+              {% else %}—{% endif %}
+            </td>
+            <td class="td-right">{% if s.avg_score is not None %}{{ s.avg_score|floatformat:2 }}{% else %}—{% endif %}</td>
+            <td class="td-right {% if s.agari_rate >= 25 %}hi{% endif %}">{{ s.agari_rate }}%</td>
+            <td class="td-right {% if s.houjuu_rate >= 15 %}lo{% endif %}">{{ s.houjuu_rate }}%</td>
+            <td class="td-right {% if s.riichi_rate >= 30 %}hi{% endif %}">{{ s.riichi_rate }}%</td>
+            <td class="td-right {% if s.furo_rate >= 35 %}hi{% endif %}">{{ s.furo_rate }}%</td>
+            <td class="td-right {% if s.sanka_rate >= 50 %}hi{% endif %}">{{ s.sanka_rate }}%</td>
+            <td class="td-right">{{ s.agari_income }}</td>
+            <td class="td-right">{{ s.houjuu_loss }}</td>
+            <td class="td-right {% if s.avg_rank and s.avg_rank <= 2.3 %}hi{% elif s.avg_rank and s.avg_rank >= 2.7 %}lo{% endif %}">
+              {% if s.avg_rank %}{{ s.avg_rank|floatformat:2 }}{% else %}—{% endif %}
+            </td>
+            <td class="td-right {% if s.top_rate >= 35 %}hi{% endif %}">{{ s.top_rate }}%</td>
+            <td class="td-right {% if s.avoid4_rate >= 85 %}hi{% endif %}">{{ s.avoid4_rate }}%</td>
+            <td class="td-right">{{ s.tsumo_rate }}%</td>
+            <td class="td-right">{{ s.dama_rate }}%</td>
+            <td class="td-right">{{ s.ryukyoku_rate }}%</td>
+            <td class="td-right">{{ s.tenpai_rate }}%</td>
+            <td class="td-right">{{ s.riichi_agari_rate }}%</td>
+            <td class="td-right {% if s.riichi_houjuu_rate >= 15 %}lo{% endif %}">{{ s.riichi_houjuu_rate }}%</td>
+            <td class="td-right">{{ s.riichi_balance }}</td>
+            <td class="td-right">{{ s.riichi_income }}</td>
+            <td class="td-right">{{ s.riichi_loss }}</td>
+            <td class="td-right">{{ s.riichi_ryukyoku_rate }}%</td>
+            <td class="td-right">{{ s.ippatsu_rate }}%</td>
+            <td class="td-right">{{ s.ura_rate }}%</td>
+            <td class="td-right">{{ s.daten_efficiency }}</td>
+            <td class="td-right">{{ s.juten_loss }}</td>
+            <td class="td-right">{{ s.adjusted_efficiency }}</td>
+            <td class="td-right">{{ s.kyoku_balance_avg }}</td>
+            <td class="td-right">{{ s.total_kyoku }}</td>
+            <td class="td-dist">{{ s.rank_dist }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="33" style="text-align:center;padding:24px;color:var(--ink-muted)">対象ユーザのデータがありません。</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── 個人対戦記録 ── -->
+    {% elif target_user and stats %}
+    <h2 style="font-size:17px;font-weight:700;margin-bottom:20px;padding-bottom:10px;border-bottom:2px solid var(--ink);max-width:960px">
       {{ target_user.username }} の対戦記録
     </h2>
 
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;max-width:960px">
 
       <!-- 基本情報 -->
       <div class="card stat-card">
@@ -69,7 +181,7 @@
           <dt>流局聴牌率</dt><dd>{{ stats.tenpai_rate }}%</dd>
           <dt>副露率</dt><dd>{{ stats.furo_rate }}%</dd>
           <dt>立直率</dt><dd>{{ stats.riichi_rate }}%</dd>
-          <dt>平均順位</dt><dd>{% if stats.avg_rank %}{{ stats.avg_rank }} 位{% else %}—{% endif %}</dd>
+          <dt>平均順位</dt><dd>{% if stats.avg_rank %}{{ stats.avg_rank|floatformat:3 }} 位{% else %}—{% endif %}</dd>
           <dt>平均和了</dt><dd>{{ stats.agari_income }} 点</dd>
           <dt>平均放銃</dt><dd>{{ stats.houjuu_loss }} 点</dd>
         </dl>
@@ -103,17 +215,15 @@
           {% if stats.total_pts is not None %}
           <dt>獲得合計pts</dt>
           <dd class="{% if stats.total_pts >= 0 %}pts-pos{% else %}pts-neg{% endif %}" style="font-weight:700;font-family:var(--mono)">
-            {% if stats.total_pts >= 0 %}+{{ stats.total_pts }}{% else %}▲{{ stats.total_pts|floatformat:1|slice:"1:" }}{% endif %} pts
+            {% if stats.total_pts >= 0 %}+{{ stats.total_pts|floatformat:1 }}{% else %}▲{{ stats.total_pts|floatformat:1|slice:"1:" }}{% endif %} pts
           </dd>
           {% endif %}
         </dl>
       </div>
 
     </div>
-    {% elif target_user %}
-    <div class="empty-state"><div class="empty-state-icon">📊</div>対戦データがありません。</div>
-    {% else %}
-    <div class="empty-state"><div class="empty-state-icon">👤</div>ユーザを選択すると対戦記録が表示されます。</div>
+    {% elif not all_players %}
+    <div class="empty-state" style="max-width:960px"><div class="empty-state-icon">👤</div>ユーザを選択すると対戦記録が表示されます。</div>
     {% endif %}
   </main>
 </div>
@@ -126,5 +236,61 @@
 .stat-dl { display:grid; grid-template-columns:1fr auto; gap:6px 16px; align-items:baseline; }
 .stat-dl dt { font-size:12px; color:var(--ink-muted); }
 .stat-dl dd { font-family:var(--mono); font-size:13px; font-weight:700; text-align:right; }
+
+/* All Players テーブル */
+.all-table {
+  border-collapse:collapse;
+  font-size:11px;
+  white-space:nowrap;
+  background:white;
+  border:1px solid var(--border);
+  box-shadow:var(--shadow);
+}
+.all-table thead tr {
+  background:var(--ink);
+  color:var(--paper);
+}
+.all-table th {
+  padding:6px 8px;
+  text-align:center;
+  font-size:10px;
+  font-family:var(--mono);
+  letter-spacing:0.04em;
+  border:1px solid #333;
+  line-height:1.3;
+  vertical-align:middle;
+}
+.all-table td {
+  padding:5px 8px;
+  border:1px solid #e0e0e0;
+  vertical-align:middle;
+}
+.tr-odd  { background:#fafaf7; }
+.tr-even { background:white; }
+.all-table tbody tr:hover { background:#e8f5e9 !important; }
+
+.col-no   { width:28px; }
+.col-name { min-width:80px; }
+.col-num  { min-width:52px; }
+.col-pts  { min-width:60px; }
+.col-pct  { min-width:52px; }
+.col-dist { min-width:120px; }
+
+.td-center { text-align:center; font-family:var(--mono); font-weight:700; }
+.td-right  { text-align:right;  font-family:var(--mono); }
+.td-dist   { text-align:center; font-family:var(--mono); font-size:11px; }
+
+/* ハイライト */
+.hi { color:#1565c0; font-weight:700; }
+.lo { color:#c62828; font-weight:700; }
+
+.player-link {
+  color:var(--ink);
+  font-weight:700;
+  text-decoration:none;
+  border-bottom:1px solid transparent;
+  transition:color 0.15s, border-color 0.15s;
+}
+.player-link:hover { color:var(--teal); border-color:var(--teal); }
 </style>
 {% endblock %}

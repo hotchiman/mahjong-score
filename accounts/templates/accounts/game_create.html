@@ -6,7 +6,8 @@
     <a href="{% url 'game_list' %}" class="topbar-brand">🀄 MJS</a>
     <nav class="topbar-nav">
       <a href="{% url 'game_list' %}" class="active">対局一覧</a>
-      <a href="{% url 'user_list' %}">ユーザ管理</a>
+      <a href="{% url 'battle_record' %}">対戦記録</a>
+      {% if request.user.is_superuser %}<a href="{% url 'user_list' %}">ユーザ管理</a>{% endif %}
       <div class="nav-sep"></div>
       <span class="topbar-user">{{ request.user.username }}</span>
       <a href="{% url 'logout' %}">ログアウト</a>
@@ -29,7 +30,7 @@
         <div class="form-group">
           <label for="name">対局名</label>
           <input type="text" id="name" name="name"
-            value="{{ request.POST.name }}" placeholder="例）2024年末大会" autofocus>
+            value="{{ request.POST.name }}" placeholder="例）2025年末大会" autofocus>
         </div>
 
         <div class="form-group">
@@ -44,7 +45,12 @@
             <option value="">— ルールを選択 —</option>
             {% for rule in rules %}
             <option value="{{ rule.id }}"
-              data-detail="{{ rule.detail }}"
+              data-init="{{ rule.init_points }}"
+              data-return="{{ rule.return_points }}"
+              data-uma2="{{ rule.uma2 }}"
+              data-uma1="{{ rule.uma1 }}"
+              data-kyotaku="{{ rule.get_kyotaku_handling_display }}"
+              data-draw="{{ rule.get_draw_handling_display }}"
               {% if request.POST.rule == rule.id|stringformat:"s" %}selected{% endif %}>
               {{ rule.name }}
             </option>
@@ -57,7 +63,7 @@
               <span>ルール詳細を見る</span>
               <span class="accordion-icon" id="accordion-icon">▼</span>
             </button>
-            <div class="accordion-content" id="accordion-content">
+            <div class="accordion-content" id="accordion-content" style="white-space:pre-line">
               <span id="rule-detail-text"></span>
             </div>
           </div>
@@ -76,31 +82,31 @@
 function updateAccordion(select) {
   const accordion = document.getElementById('rule-accordion');
   const detailText = document.getElementById('rule-detail-text');
-  const option = select.options[select.selectedIndex];
-  const detail = option.dataset.detail;
+  const opt = select.options[select.selectedIndex];
+  if (!opt.value) { accordion.style.display = 'none'; return; }
 
-  if (detail) {
-    accordion.style.display = 'block';
-    detailText.textContent = detail;
-    // 選択時にアコーディオンを自動展開
-    document.getElementById('accordion-content').classList.add('open');
-    document.getElementById('accordion-icon').classList.add('open');
-  } else {
-    accordion.style.display = 'none';
-  }
+  const initPts   = Number(opt.dataset.init).toLocaleString();
+  const retPts    = Number(opt.dataset.return).toLocaleString();
+  const uma2      = opt.dataset.uma2;
+  const uma1      = opt.dataset.uma1;
+  const kyotaku   = opt.dataset.kyotaku;
+  const draw      = opt.dataset.draw;
+
+  const text = `基本ルール：${initPts}点持ち${retPts}点返し、${Math.abs(uma2)}-${uma1}\n終局時供託の扱い：${kyotaku}\n同点の扱い：${draw}`;
+  detailText.textContent = text;
+  accordion.style.display = 'block';
+  document.getElementById('accordion-content').classList.add('open');
+  document.getElementById('accordion-icon').classList.add('open');
 }
 
 function toggleAccordion() {
-  const content = document.getElementById('accordion-content');
-  const icon = document.getElementById('accordion-icon');
-  content.classList.toggle('open');
-  icon.classList.toggle('open');
+  document.getElementById('accordion-content').classList.toggle('open');
+  document.getElementById('accordion-icon').classList.toggle('open');
 }
 
-// ページロード時：POSTで戻ってきた場合にルール詳細を復元
 window.addEventListener('DOMContentLoaded', () => {
-  const select = document.getElementById('rule');
-  if (select.value) updateAccordion(select);
+  const sel = document.getElementById('rule');
+  if (sel.value) updateAccordion(sel);
 });
 </script>
 {% endblock %}

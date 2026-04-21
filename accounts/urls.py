@@ -15,5 +15,7 @@ urlpatterns = [
     path('games/<int:room_id>/results/', views.game_result_list_view, name='game_result_list'),
     path('games/<int:room_id>/sessions/new/', views.session_create_view, name='session_create'),
     path('games/<int:room_id>/sessions/<int:session_id>/', views.session_edit_view, name='session_edit'),
+    path('games/<int:room_id>/sessions/<int:session_id>/edit-result/', views.session_result_edit_view, name='session_result_edit'),
+    path('games/<int:room_id>/sessions/<int:session_id>/delete/', views.session_result_delete_view, name='session_result_delete'),
     path('records/', views.battle_record_view, name='battle_record'),
 ]
