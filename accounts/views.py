@@ -219,14 +219,24 @@ def user_delete_view(request, user_id):
 
 @login_required
 def game_list_view(request):
-    rooms = GameRoom.objects.filter(
-        Q(created_by=request.user) | Q(members__user=request.user)
-    ).distinct().select_related('rule', 'created_by').prefetch_related('members')
+    # スーパーユーザは全対局を表示、それ以外は自分が作成/参加している対局のみ
+    if request.user.is_superuser:
+        rooms = GameRoom.objects.all().select_related('rule', 'created_by').prefetch_related('members')
+    else:
+        rooms = GameRoom.objects.filter(
+            Q(created_by=request.user) | Q(members__user=request.user)
+        ).distinct().select_related('rule', 'created_by').prefetch_related('members')
 
-    # 各ルームの対局結果サマリを付加
+    # 各ルームの対局結果サマリを付加（自分の成績を表示）
     rooms_with_stats = []
     for room in rooms:
-        results = GameResult.objects.filter(session__room=room)
+        if request.user.is_superuser:
+            # スーパーユーザは全参加者合計を表示
+            results = GameResult.objects.filter(session__room=room)
+        else:
+            # 一般ユーザは自分の成績のみ
+            results = GameResult.objects.filter(session__room=room, user=request.user)
+
         total_pts = results.aggregate(s=Sum('pts'))['s']
         avg_rank  = results.aggregate(a=Avg('rank'))['a']
         finalized_count = room.sessions.filter(is_finalized=True).count()
@@ -313,12 +323,21 @@ def game_result_list_view(request, room_id):
         avg_rank  = results.aggregate(a=Avg('rank'))['a']
         count     = results.count()
         details   = list(results.select_related('session').order_by('session__session_number'))
+        # アコーディオン用に対局日も付加
+        details_with_date = []
+        for d in details:
+            details_with_date.append({
+                'session_number': d.session.session_number,
+                'game_date': d.session.game_date,
+                'rank': d.rank,
+                'pts': d.pts,
+            })
         summary.append({
             'user': user,
             'total_pts': total_pts,
-            'avg_rank': round(avg_rank, 3) if avg_rank else None,
+            'avg_rank': round(avg_rank, 2) if avg_rank else None,
             'count': count,
-            'details': details,
+            'details': details_with_date,
         })
     summary.sort(key=lambda x: x['total_pts'], reverse=True)
 

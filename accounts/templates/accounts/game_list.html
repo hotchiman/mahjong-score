@@ -55,7 +55,7 @@
         <!-- 下段：平均着順 / 消化対局数 | 右端：ルール名 -->
         <div class="rc-bottom">
           <div class="rc-sub">
-            {% if item.avg_rank %}{{ item.avg_rank }} 位 / {% endif %}{{ item.finalized_count }} / {{ room.game_count }} 戦
+            {% if item.avg_rank %}{{ item.avg_rank|floatformat:2 }}位 / {% endif %}{{ item.finalized_count }}戦
           </div>
           <div class="rc-rule">{{ room.rule.name }}</div>
         </div>

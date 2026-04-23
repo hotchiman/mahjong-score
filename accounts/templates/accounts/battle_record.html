@@ -68,12 +68,12 @@
     </div>
     {% endwith %}
 
-    <div style="overflow-x:auto">
+    <div class="all-table-wrapper">
       <table class="all-table">
         <thead>
           <tr>
-            <th class="col-no">#</th>
-            <th class="col-name">選手名</th>
+            <th class="col-no" style="position:sticky;left:0;z-index:3;background:var(--ink)">#</th>
+            <th class="col-name" style="position:sticky;left:32px;z-index:3;background:var(--ink)">選手名</th>
             <th class="col-num">対戦数</th>
             <th class="col-pts">ポイント</th>
             <th class="col-num">平均<br>スコア</th>
@@ -237,6 +237,12 @@
 .stat-dl dt { font-size:12px; color:var(--ink-muted); }
 .stat-dl dd { font-family:var(--mono); font-size:13px; font-weight:700; text-align:right; }
 
+/* All Players テーブルラッパー */
+.all-table-wrapper {
+  overflow-x:auto;
+  position:relative;
+}
+
 /* All Players テーブル */
 .all-table {
   border-collapse:collapse;
@@ -253,7 +259,7 @@
 .all-table th {
   padding:6px 8px;
   text-align:center;
-  font-size:10px;
+  font-size:11px;
   font-family:var(--mono);
   letter-spacing:0.04em;
   border:1px solid #333;
@@ -264,21 +270,22 @@
   padding:5px 8px;
   border:1px solid #e0e0e0;
   vertical-align:middle;
+  font-size:12px;
 }
 .tr-odd  { background:#fafaf7; }
 .tr-even { background:white; }
 .all-table tbody tr:hover { background:#e8f5e9 !important; }
 
-.col-no   { width:28px; }
-.col-name { min-width:80px; }
-.col-num  { min-width:52px; }
-.col-pts  { min-width:60px; }
-.col-pct  { min-width:52px; }
-.col-dist { min-width:120px; }
+.col-no   { width:32px; position:sticky; left:0; z-index:2; background:inherit; }
+.col-name { min-width:90px; position:sticky; left:32px; z-index:2; background:inherit; }
+.col-num  { min-width:58px; }
+.col-pts  { min-width:68px; }
+.col-pct  { min-width:58px; }
+.col-dist { min-width:130px; }
 
 .td-center { text-align:center; font-family:var(--mono); font-weight:700; }
 .td-right  { text-align:right;  font-family:var(--mono); }
-.td-dist   { text-align:center; font-family:var(--mono); font-size:11px; }
+.td-dist   { text-align:center; font-family:var(--mono); font-size:12px; }
 
 /* ハイライト */
 .hi { color:#1565c0; font-weight:700; }
