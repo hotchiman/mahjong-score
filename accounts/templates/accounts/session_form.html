@@ -161,16 +161,15 @@
 
       <!-- ① 局概要入力エリア -->
       <div class="m-card">
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <label class="m-label">局 / 本場</label>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap">
           <select id="m_master" class="m-sel-wide" onchange="updateModalWinPts()">
             <option value="">選択</option>
           </select>
-          <span style="font-size:12px">局</span>
-          <input type="number" id="m_honba" class="m-num-sm" placeholder="0" min="0">
-          <span style="font-size:12px">本場</span>
-          <span style="margin-left:12px;font-size:12px">供託</span>
-          <input type="number" id="m_kyotaku" class="m-num-sm" placeholder="0" min="0">
+          <span style="font-size:12px;white-space:nowrap">局</span>
+          <input type="number" id="m_honba" class="m-num-honba" placeholder="0" min="0">
+          <span style="font-size:12px;white-space:nowrap">本場</span>
+          <span style="font-size:12px;white-space:nowrap;margin-left:8px">供託</span>
+          <input type="number" id="m_kyotaku" class="m-num-honba" placeholder="0" min="0">
         </div>
         <div style="margin-top:10px;display:flex;align-items:center;gap:8px">
           <input type="checkbox" id="m_ryukyoku" onchange="toggleRyukyoku()">
@@ -258,15 +257,16 @@
 .m-label { font-size:12px; font-weight:700; color:var(--ink-muted); }
 .m-field-label { font-size:11px; font-weight:700; color:var(--ink-muted); letter-spacing:0.04em; text-transform:uppercase; margin-bottom:3px; }
 .m-sel-wide { font-size:12px; padding:4px 6px; border:1px solid #bbb; border-radius:4px; min-width:70px; }
-.m-sel-full { font-size:12px; padding:5px 6px; border:1px solid #bbb; border-radius:4px; width:100%; }
+.m-sel-full { font-size:12px; padding:5px 6px; border:1px solid #bbb; border-radius:4px; width:100%; max-width:140px; }
 .m-num-sm { width:42px; font-size:12px; padding:4px 4px; border:1px solid #bbb; border-radius:4px; text-align:right; }
-.m-num-xs { width:34px; font-size:11px; padding:3px 3px; border:1px solid #bbb; border-radius:3px; text-align:right; }
+.m-num-honba { width:36px; font-size:12px; padding:5px 4px; border:1px solid #bbb; border-radius:4px; text-align:right; }
+.m-num-xs { width:34px; font-size:12px; padding:5px 3px; border:1px solid #bbb; border-radius:4px; text-align:right; }
 .m-yaku-row { display:flex; gap:4px; align-items:center; }
 .m-yaku-sel { font-size:11px; padding:2px; border:1px solid #bbb; border-radius:3px; flex:1; }
 .m-del-yaku { font-size:10px; padding:1px 5px; border:1px solid #e57373; background:#ffebee; color:#c62828; cursor:pointer; border-radius:3px; }
 .m-add-yaku-btn { font-size:11px; padding:2px 8px; border:1px solid #999; background:#e8e8e8; cursor:pointer; border-radius:3px; margin-top:4px; }
 .m-check-row { display:flex; align-items:center; gap:6px; font-size:12px; }
-.m-furo-num { width:36px; font-size:11px; padding:2px; border:1px solid #bbb; border-radius:3px; text-align:right; }
+.m-furo-num { width:36px; min-width:36px; max-width:36px; font-size:12px; padding:5px 4px; border:1px solid #bbb; border-radius:4px; text-align:right; }
 </style>
 
 <style>

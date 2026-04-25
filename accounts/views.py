@@ -149,6 +149,8 @@ def register_view(request):
         error = None
         if not username or not password:
             error = 'ユーザ名とパスワードを入力してください。'
+        elif len(username) > 10:
+            error = 'ユーザ名は半角10文字以内で入力してください。'
         elif password != password_confirm:
             error = 'パスワードが一致しません。'
         elif User.objects.filter(username=username).exists():
