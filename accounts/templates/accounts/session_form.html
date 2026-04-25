@@ -44,8 +44,8 @@
         </span>
       </div>
 
-      <!-- 座席 -->
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;max-width:760px">
+      <!-- 座席（スマホ時は2列×2行に折り返し） -->
+      <div class="seat-grid">
         {% for seat_key, seat_label in seats %}
         <div style="border:1px solid var(--border);padding:10px 12px;border-radius:2px;background:var(--paper-warm)">
           <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-muted);margin-bottom:5px">{{ seat_label }}</div>
@@ -233,7 +233,7 @@
         <div class="m-field-label" style="margin-bottom:4px">立直者</div>
         <div id="m_riichi_checks" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-bottom:10px"></div>
         <div class="m-field-label" style="margin-bottom:4px">副露者</div>
-        <div id="m_furo_checks" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px"></div>
+        <div id="m_furo_checks" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 8px"></div>
       </div>
 
     </div><!-- /padding -->
@@ -259,14 +259,17 @@
 .m-sel-wide { font-size:12px; padding:4px 6px; border:1px solid #bbb; border-radius:4px; min-width:70px; }
 .m-sel-full { font-size:12px; padding:5px 6px; border:1px solid #bbb; border-radius:4px; width:100%; max-width:140px; }
 .m-num-sm { width:42px; font-size:12px; padding:4px 4px; border:1px solid #bbb; border-radius:4px; text-align:right; }
-.m-num-honba { width:36px; font-size:12px; padding:5px 4px; border:1px solid #bbb; border-radius:4px; text-align:right; }
-.m-num-xs { width:34px; font-size:12px; padding:5px 3px; border:1px solid #bbb; border-radius:4px; text-align:right; }
+.m-num-honba { width:34px; font-size:11px; padding:3px 4px; border:1px solid #bbb; border-radius:4px; text-align:right; }
+.m-num-xs { width:30px; font-size:11px; padding:3px 3px; border:1px solid #bbb; border-radius:3px; text-align:right; }
 .m-yaku-row { display:flex; gap:4px; align-items:center; }
 .m-yaku-sel { font-size:11px; padding:2px; border:1px solid #bbb; border-radius:3px; flex:1; }
 .m-del-yaku { font-size:10px; padding:1px 5px; border:1px solid #e57373; background:#ffebee; color:#c62828; cursor:pointer; border-radius:3px; }
 .m-add-yaku-btn { font-size:11px; padding:2px 8px; border:1px solid #999; background:#e8e8e8; cursor:pointer; border-radius:3px; margin-top:4px; }
 .m-check-row { display:flex; align-items:center; gap:6px; font-size:12px; }
-.m-furo-num { width:36px; min-width:36px; max-width:36px; font-size:12px; padding:5px 4px; border:1px solid #bbb; border-radius:4px; text-align:right; }
+.m-check-row input[type="checkbox"] { flex-shrink:0; }
+.m-check-row label { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.m-check-row .m-furo-num { flex-shrink:0; margin-left:auto; }
+.m-furo-num { width:36px; min-width:36px; max-width:36px; font-size:11px; padding:3px 4px; border:1px solid #bbb; border-radius:3px; text-align:right; }
 </style>
 
 <style>
@@ -372,6 +375,17 @@ select.sel-yaku  { max-width:140px; width:140px; font-size:10px; }
   font-size:9px; padding:0 3px;
   border:1px solid #e57373; background:#ffebee;
   cursor:pointer; border-radius:2px; color:#c62828; flex-shrink:0;
+}
+.seat-grid {
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+  max-width:760px;
+}
+@media (max-width:600px) {
+  .seat-grid {
+    grid-template-columns:repeat(2,1fr);
+  }
 }
 </style>
 

@@ -72,8 +72,8 @@
       <table class="all-table">
         <thead>
           <tr>
-            <th class="col-no" style="position:sticky;left:0;z-index:3;background:var(--ink);width:32px;min-width:32px;max-width:32px">#</th>
-            <th class="col-name" style="position:sticky;left:32px;z-index:3;background:var(--ink);box-shadow:2px 0 4px rgba(0,0,0,0.2)">選手名</th>
+            <th class="col-no" style="position:sticky;left:0;z-index:2;background:var(--ink);width:32px;min-width:32px;max-width:32px">#</th>
+            <th class="col-name" style="position:sticky;left:32px;z-index:2;background:var(--ink);box-shadow:2px 0 4px rgba(0,0,0,0.2)">選手名</th>
             <th class="col-num">対戦数</th>
             <th class="col-pts">ポイント</th>
             <th class="col-num">平均<br>スコア</th>
@@ -241,6 +241,7 @@
 .all-table-wrapper {
   overflow-x:auto;
   position:relative;
+  isolation:isolate;
 }
 
 /* All Players テーブル */
@@ -276,8 +277,8 @@
 .tr-even { background:white; }
 .all-table tbody tr:hover { background:#e8f5e9 !important; }
 
-.col-no   { width:32px; min-width:32px; max-width:32px; position:sticky; left:0; z-index:2; background:inherit; }
-.col-name { min-width:90px; position:sticky; left:32px; z-index:2; background:inherit; box-shadow:2px 0 4px rgba(0,0,0,0.08); }
+.col-no   { width:32px; min-width:32px; max-width:32px; position:sticky; left:0; z-index:1; background:inherit; }
+.col-name { min-width:90px; position:sticky; left:32px; z-index:1; background:inherit; box-shadow:2px 0 4px rgba(0,0,0,0.08); }
 .col-num  { min-width:58px; }
 .col-pts  { min-width:68px; }
 .col-pct  { min-width:58px; }
