@@ -49,8 +49,8 @@
               data-return="{{ rule.return_points }}"
               data-uma2="{{ rule.uma2 }}"
               data-uma1="{{ rule.uma1 }}"
-              data-kyotaku="{{ rule.get_kyotaku_handling_display }}"
-              data-draw="{{ rule.get_draw_handling_display }}"
+              data-kyotaku-key="{{ rule.kyotaku_handling }}"
+              data-draw-key="{{ rule.draw_handling }}"
               {% if request.POST.rule == rule.id|stringformat:"s" %}selected{% endif %}>
               {{ rule.name }}
             </option>
@@ -60,11 +60,17 @@
           <!-- アコーディオン：ルール詳細 -->
           <div class="accordion" id="rule-accordion" style="display:none;margin-top:8px">
             <button type="button" class="accordion-trigger" onclick="toggleAccordion()">
-              <span>ルール詳細を見る</span>
+              <span>ルール詳細</span>
               <span class="accordion-icon" id="accordion-icon">▼</span>
             </button>
-            <div class="accordion-content" id="accordion-content" style="white-space:pre-line">
-              <span id="rule-detail-text"></span>
+            <div class="accordion-content" id="accordion-content">
+              <table class="rule-detail-table" id="rule-detail-table">
+                <tbody>
+                  <tr><td class="rdt-label">基本ルール</td><td class="rdt-val" id="rd-basic"></td></tr>
+                  <tr><td class="rdt-label">終局時供託の扱い</td><td class="rdt-val" id="rd-kyotaku"></td></tr>
+                  <tr><td class="rdt-label">同点の扱い</td><td class="rdt-val" id="rd-draw"></td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -78,22 +84,40 @@
   </main>
 </div>
 
+<style>
+.rule-detail-table { border-collapse:collapse; width:100%; font-size:13px; }
+.rdt-label { color:var(--ink-muted); white-space:nowrap; padding:3px 12px 3px 0; vertical-align:top; font-size:12px; }
+.rdt-val   { color:var(--ink-soft); padding:3px 0; vertical-align:top; line-height:1.5; }
+</style>
+
 <script>
+const KYOTAKU_LABELS = {
+  'top_split': 'トップ取り、トップ複数の場合は均等に分配、端数は起家優先',
+  'top_east':  'トップ取り、トップ複数の場合は起家優先',
+  'carryover': '持ち越し'
+};
+const DRAW_LABELS = {
+  'split_east':    '順位点を人数で分ける、3人トップの場合の端数は起家優先',
+  'split':         '順位点を人数で分ける、端数も均等に分配',
+  'east_priority': '起家（東1局東家）に近い方から上位とする'
+};
+
 function updateAccordion(select) {
   const accordion = document.getElementById('rule-accordion');
-  const detailText = document.getElementById('rule-detail-text');
   const opt = select.options[select.selectedIndex];
   if (!opt.value) { accordion.style.display = 'none'; return; }
 
-  const initPts   = Number(opt.dataset.init).toLocaleString();
-  const retPts    = Number(opt.dataset.return).toLocaleString();
-  const uma2      = opt.dataset.uma2;
-  const uma1      = opt.dataset.uma1;
-  const kyotaku   = opt.dataset.kyotaku;
-  const draw      = opt.dataset.draw;
+  const initPts    = Number(opt.dataset.init).toLocaleString();
+  const retPts     = Number(opt.dataset.return).toLocaleString();
+  const uma2       = opt.dataset.uma2;
+  const uma1       = opt.dataset.uma1;
+  const kyotakuKey = opt.dataset.kyotakuKey;
+  const drawKey    = opt.dataset.drawKey;
 
-  const text = `基本ルール：${initPts}点持ち${retPts}点返し、${Math.abs(uma2)}-${uma1}\n終局時供託の扱い：${kyotaku}\n同点の扱い：${draw}`;
-  detailText.textContent = text;
+  document.getElementById('rd-basic').textContent    = `${initPts}点持ち${retPts}点返し、${Math.abs(uma2)}-${uma1}`;
+  document.getElementById('rd-kyotaku').textContent  = KYOTAKU_LABELS[kyotakuKey] || kyotakuKey;
+  document.getElementById('rd-draw').textContent     = DRAW_LABELS[drawKey]    || drawKey;
+
   accordion.style.display = 'block';
   document.getElementById('accordion-content').classList.add('open');
   document.getElementById('accordion-icon').classList.add('open');

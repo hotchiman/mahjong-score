@@ -41,9 +41,11 @@
           <div class="rc-left">
             <span class="rc-name">{{ room.name }}</span>
             <span class="rc-count">（全{{ room.game_count }}戦）</span>
+            {% if request.user.is_superuser or room.created_by == request.user %}
             <button class="rc-invite-btn"
               onclick="event.stopPropagation(); copyInviteLink('{{ request.scheme }}://{{ request.get_host }}{% url 'game_join' room.invite_token %}')"
               title="招待リンクをコピー">招待</button>
+            {% endif %}
           </div>
           <div class="rc-pts {% if item.total_pts is not None %}{% if item.total_pts >= 0 %}pts-pos{% else %}pts-neg{% endif %}{% else %}pts-none{% endif %}">
             {% if item.total_pts is not None %}

@@ -35,7 +35,7 @@
     <section style="margin-bottom:36px">
       <h2 class="section-title">合計戦績</h2>
       <table class="data-table summary-table">
-        <thead>
+        <thead style="display:none">
           <tr>
             <th class="col-s-rank">順位</th>
             <th class="col-s-name">ユーザ名</th>
@@ -56,13 +56,13 @@
               </span>
             </td>
             <td class="col-s-avg" style="text-align:center;font-family:var(--mono)">{% if s.avg_rank %}{{ s.avg_rank|floatformat:2 }}位{% else %}—{% endif %}</td>
-            <td class="col-s-cnt" style="font-family:var(--mono);text-align:center">{{ s.count }} / {{ room.game_count }}</td>
+            <td class="col-s-cnt" style="font-family:var(--mono);text-align:center">{{ s.count }}/{{ room.game_count }}</td>
           </tr>
           <!-- アコーディオン行 -->
           <tr id="acc-{{ s.user.id }}" class="accordion-row" style="display:none">
             <td colspan="5" style="padding:0 0 0 0;background:#f8f8f8">
               <table class="acc-table">
-                <thead>
+                <thead style="display:none">
                   <tr>
                     <th>対局No</th>
                     <th>対局日</th>
@@ -206,7 +206,7 @@
 .col-s-cnt  { width:110px; }
 
 .summary-row:hover { background:var(--paper-warm) !important; }
-.summary-row td { padding:12px 16px; }
+.summary-row td { padding:7px 14px; }
 
 /* アコーディオン */
 .accordion-row td { border-top:1px solid var(--border); border-bottom:2px solid var(--teal); }
@@ -290,12 +290,12 @@
 .player-table tbody tr:last-child { border-bottom:none; }
 .player-table tbody tr:nth-child(odd)  { background:#fafaf9; }
 .player-table tbody tr:nth-child(even) { background:white; }
-.player-table td { padding:6px 12px; font-size:13px; }
+.player-table td { padding:5px 10px; font-size:13px; }
 
 .col-rank { width:52px; white-space:nowrap; }
 .col-name { width:auto; min-width:80px; }
-.col-pts  { width:150px; }
-.col-rah  { width:130px; font-family:var(--mono); font-size:13px; white-space:nowrap; text-align:right; }
+.col-pts  { width:140px; }
+.col-rah  { width:120px; font-family:var(--mono); font-size:12px; white-space:nowrap; text-align:left; padding-left:8px !important; }
 
 .rank-num { font-weight:700; font-size:14px; color:var(--ink); }
 .final-pts-val { font-family:var(--mono); font-weight:700; font-size:14px; }
