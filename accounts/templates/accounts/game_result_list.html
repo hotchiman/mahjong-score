@@ -34,65 +34,45 @@
     <!-- ① 合計戦績 -->
     <section style="margin-bottom:36px">
       <h2 class="section-title">合計戦績</h2>
-      <table class="data-table summary-table" style="border-radius:8px;overflow:hidden;table-layout:fixed;width:100%">
-        <thead style="display:none">
-          <tr>
-            <th class="col-s-rank">順位</th>
-            <th class="col-s-name">ユーザ名</th>
-            <th class="col-s-pts">合計ポイント</th>
-            <th class="col-s-avg">平均着順</th>
-            <th class="col-s-cnt">消化対局数</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for s in summary %}
-          <!-- ユーザ行（クリックでアコーディオン） -->
-          <tr class="summary-row" onclick="toggleAccordion('acc-{{ s.user.id }}')" style="cursor:pointer">
-            <td class="col-s-rank" style="font-family:var(--mono);font-size:13px;text-align:center">{{ forloop.counter }}</td>
-            <td class="col-s-name" style="font-weight:700">{{ s.user.username }}</td>
-            <td class="col-s-pts" style="text-align:right">
-              <span class="pts-val {% if s.total_pts >= 0 %}pts-pos{% else %}pts-neg{% endif %}" style="font-size:16px;font-weight:700;font-family:var(--mono)">
-                {% if s.total_pts >= 0 %}+{{ s.total_pts|floatformat:1 }}{% else %}▲{{ s.total_pts|floatformat:1|slice:"1:" }}{% endif %}
-              </span>
-              <div style="font-size:10px;color:var(--ink-muted);font-family:var(--mono);margin-top:1px">{{ s.count }}/{{ room.game_count }}</div>
-            </td>
-            <td class="col-s-avg" style="text-align:center;font-family:var(--mono)">{% if s.avg_rank %}{{ s.avg_rank|floatformat:2 }}位{% else %}—{% endif %}</td>
-            <td class="col-s-cnt" style="display:none"></td>
-          </tr>
-          <!-- アコーディオン行 -->
-          <tr id="acc-{{ s.user.id }}" class="accordion-row" style="display:none">
-            <td colspan="5" style="padding:0;background:#f8f8f8;max-width:0;overflow:hidden">
-              <table class="acc-table">
-                <thead style="display:none">
-                  <tr>
-                    <th>対局No</th>
-                    <th>対局日</th>
-                    <th>着順</th>
-                    <th>獲得pts</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for d in s.details %}
-                  <tr>
-                    <td>対局{{ d.session_number }}</td>
-                    <td style="font-family:var(--mono)">{{ d.game_date|date:"Y/n/j" }}</td>
-                    <td>{{ d.rank }}着</td>
-                    <td style="font-family:var(--mono);font-weight:700">
-                      <span class="{% if d.pts >= 0 %}pts-pos{% else %}pts-neg{% endif %}">{% if d.pts >= 0 %}+{{ d.pts|floatformat:1 }}{% else %}▲{{ d.pts|floatformat:1|slice:"1:" }}{% endif %}</span>
-                    </td>
-                  </tr>
-                  {% empty %}
-                  <tr><td colspan="4" style="text-align:center;color:var(--ink-muted)">データなし</td></tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </td>
-          </tr>
-          {% empty %}
-          <tr><td colspan="5" class="empty-state">まだ対局結果がありません。</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      <div class="summary-wrap">
+        {% for s in summary %}
+        <!-- ユーザ行 -->
+        <div class="summary-row" onclick="toggleAccordion('acc-{{ s.user.id }}')">
+          <div class="s-rank">{{ forloop.counter }}</div>
+          <div class="s-name">
+            <a href="{% url 'battle_record' %}?user_id={{ s.user.id }}&room_id={{ room.id }}" class="link" onclick="event.stopPropagation()">{{ s.user.username }}</a>
+          </div>
+          <div class="s-pts">
+            <span class="pts-val {% if s.total_pts >= 0 %}pts-pos{% else %}pts-neg{% endif %}">
+              {% if s.total_pts >= 0 %}+{{ s.total_pts|floatformat:1 }}{% else %}▲{{ s.total_pts|floatformat:1|slice:"1:" }}{% endif %}
+            </span>
+            <div class="s-count">{{ s.count }}/{{ room.game_count }}</div>
+          </div>
+          <div class="s-avg">{% if s.avg_rank %}{{ s.avg_rank|floatformat:2 }}位{% else %}—{% endif %}</div>
+        </div>
+        <!-- アコーディオン -->
+        <div id="acc-{{ s.user.id }}" class="acc-panel" style="display:none">
+          <table class="acc-table">
+            <tbody>
+              {% for d in s.details %}
+              <tr>
+                <td class="acc-no">対局{{ d.session_number }}</td>
+                <td class="acc-date">{{ d.game_date|date:"Y/n/j" }}</td>
+                <td class="acc-rank">{{ d.rank }}着</td>
+                <td class="acc-pts">
+                  <span class="{% if d.pts >= 0 %}pts-pos{% else %}pts-neg{% endif %}">{% if d.pts >= 0 %}+{{ d.pts|floatformat:1 }}{% else %}▲{{ d.pts|floatformat:1|slice:"1:" }}{% endif %}</span>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="4" style="text-align:center;color:var(--ink-muted);padding:8px">データなし</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% empty %}
+        <div style="padding:16px;text-align:center;color:var(--ink-muted)">まだ対局結果がありません。</div>
+        {% endfor %}
+      </div>
     </section>
 
     <!-- ② 対局詳細（カード形式） -->
@@ -137,7 +117,7 @@
                   <th class="col-rank">順位</th>
                   <th class="col-name">プレイヤー名</th>
                   <th class="col-pts">最終持ち点</th>
-                  <th class="col-rah">立直 / 和了 / 放銃</th>
+                  <th class="col-rah">立直/和了/放銃</th>
                 </tr>
               </thead>
               <tbody>
@@ -165,7 +145,7 @@
                   <th class="col-rank">座席</th>
                   <th class="col-name">プレイヤー名</th>
                   <th class="col-pts">最終持ち点</th>
-                  <th class="col-rah">立直 / 和了 / 放銃</th>
+                  <th class="col-rah">立直/和了/放銃</th>
                 </tr>
               </thead>
               <tbody>
@@ -198,38 +178,51 @@
 .pts-pos { color:var(--teal); }
 .pts-neg { color:var(--accent); }
 
-/* 合計戦績テーブル */
-.summary-table { table-layout:fixed; width:100%; }
-.col-s-rank { width:44px; }
-.col-s-name { width:auto; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.col-s-pts  { width:130px; text-align:right; }
-.col-s-avg  { width:90px; }
-.col-s-cnt  { width:0; padding:0; border:0; }
-
-.summary-row:hover { background:inherit !important; }
-.summary-row td { padding:5px 12px; }
-
-/* アコーディオン */
-.accordion-row td { border-top:1px solid var(--border); border-bottom:2px solid var(--teal); }
-.acc-table { width:100%; border-collapse:collapse; }
-.acc-table th {
-  padding:4px 8px;
-  background:#e8f5f0;
-  font-size:11px;
-  font-weight:700;
-  color:var(--ink-muted);
-  text-align:left;
-  border-bottom:1px solid var(--border);
-  white-space:nowrap;
+/* 合計戦績（divベース） */
+.summary-wrap {
+  background:white;
+  border:1px solid var(--border);
+  border-radius:8px;
+  overflow:hidden;
+  box-shadow:var(--shadow);
 }
+.summary-row {
+  display:grid;
+  grid-template-columns:36px 1fr 80px 80px;
+  align-items:center;
+  padding:6px 6px;
+  border-bottom:1px solid var(--border);
+  cursor:pointer;
+  gap:8px;
+}
+.summary-row:last-of-type { border-bottom:none; }
+.summary-row:hover { background:inherit; }
+
+.s-rank { font-family:var(--mono); font-size:13px; text-align:center; color:var(--ink-muted); }
+.s-name { font-weight:700; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.s-pts  { text-align:right; }
+.pts-val { font-size:16px; font-weight:700; font-family:var(--mono); }
+.s-count { font-size:10px; color:var(--ink-muted); font-family:var(--mono); margin-top:1px; }
+.s-avg  { text-align:center; font-family:var(--mono); font-size:13px; }
+
+/* アコーディオンパネル */
+.acc-panel {
+  background:#f8f8f8;
+  border-bottom:2px solid var(--teal);
+}
+.acc-table { width:100%; border-collapse:collapse; }
 .acc-table td {
-  padding:5px 8px;
+  padding:5px 12px;
   font-size:13px;
   border-bottom:1px solid #eee;
   white-space:nowrap;
 }
 .acc-table tbody tr:last-child td { border-bottom:none; }
 .acc-table tbody tr:hover { background:#f0faf6; }
+.acc-no   { width:70px; color:var(--ink-muted); }
+.acc-date { width:90px; font-family:var(--mono); color:var(--ink-muted); }
+.acc-rank { width:50px; }
+.acc-pts  { font-family:var(--mono); font-weight:700; }
 
 /* セッションブロック */
 .sess-block {
@@ -282,7 +275,7 @@
 .status-wip  { background:#fff3e0; border:1px solid #ff9800; color:#e65100; }
 
 /* プレイヤーテーブル */
-.player-table { width:100%; border-collapse:collapse; min-width:420px; }
+.player-table { width:100%; border-collapse:collapse; min-width:350px; }
 .player-table thead tr { background:white; border-bottom:1px solid var(--border); }
 .player-table th {
   padding:3px 8px; font-size:11px; font-weight:700;
@@ -307,9 +300,9 @@
 
 <script>
 function toggleAccordion(id) {
-  const row = document.getElementById(id);
-  if (!row) return;
-  row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+  const panel = document.getElementById(id);
+  if (!panel) return;
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
 }
 </script>
 {% endblock %}

@@ -146,11 +146,16 @@ def register_view(request):
         username = request.POST.get('username', '').strip()
         password = request.POST.get('password', '')
         password_confirm = request.POST.get('password_confirm', '')
+        def username_width(s):
+            """半角=1、全角=2 として合計幅を返す"""
+            import unicodedata
+            return sum(2 if unicodedata.east_asian_width(ch) in ('W', 'F', 'A') else 1 for ch in s)
+
         error = None
         if not username or not password:
             error = 'ユーザ名とパスワードを入力してください。'
-        elif len(username) > 10:
-            error = 'ユーザ名は半角10文字以内で入力してください。'
+        elif username_width(username) > 10:
+            error = 'ユーザ名は半角10文字以内（全角5文字以内）で入力してください。'
         elif password != password_confirm:
             error = 'パスワードが一致しません。'
         elif User.objects.filter(username=username).exists():
