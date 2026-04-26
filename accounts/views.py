@@ -774,8 +774,17 @@ def _calc_user_stats(target_user, room_id, rule_id):
 
 @login_required
 def battle_record_view(request):
-    # スーパーユーザを除外
-    users  = User.objects.filter(is_superuser=False).order_by('username')
+    # 自分と同じ対局ルームに参加しているユーザのみ表示（スーパーユーザ除外）
+    my_room_ids = GameRoom.objects.filter(
+        Q(created_by=request.user) | Q(members__user=request.user)
+    ).values_list('id', flat=True)
+
+    users = User.objects.filter(
+        is_superuser=False
+    ).filter(
+        Q(joined_rooms__room_id__in=my_room_ids) | Q(created_rooms__id__in=my_room_ids)
+    ).distinct().order_by('username')
+
     rooms  = GameRoom.objects.filter(
         Q(created_by=request.user) | Q(members__user=request.user)
     ).distinct()
