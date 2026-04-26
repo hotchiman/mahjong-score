@@ -72,6 +72,9 @@
               </span>
             </div>
             {% endwith %}
+          {% elif not readonly %}
+            <!-- 未確定時：着順・最終持ち点をJSで動的表示 -->
+            <div id="seat-live-{{ seat_key }}" style="margin-top:5px;font-family:var(--mono);font-size:12px;min-height:18px"></div>
           {% endif %}
         </div>
         {% endfor %}
@@ -499,6 +502,43 @@ function recalcAllPoints() {
   for (let i = 1; i <= roundCount; i++) {
     SEATS.forEach(seat => calcPointsAfter(i, seat));
   }
+  updateSeatLiveDisplay();
+}
+
+/* ── 未確定時：座席エリアに着順・最終持ち点をリアルタイム表示 ── */
+function updateSeatLiveDisplay() {
+  if (READONLY) return;
+  if (roundCount === 0) {
+    SEATS.forEach(seat => {
+      const el = document.getElementById(`seat-live-${seat}`);
+      if (el) el.innerHTML = '';
+    });
+    return;
+  }
+  // 最終行の持ち点を取得
+  const lastPoints = {};
+  SEATS.forEach(seat => {
+    const el = document.getElementById(`round_${roundCount}_${seat}_points_after`);
+    lastPoints[seat] = parseInt(el ? (el.value || 0) : 0) || 0;
+  });
+
+  // 持ち点を降順ソートして着順を決定（同点は起家優先）
+  const sorted = [...SEATS].sort((a, b) => {
+    if (lastPoints[b] !== lastPoints[a]) return lastPoints[b] - lastPoints[a];
+    return SEATS.indexOf(a) - SEATS.indexOf(b);
+  });
+  const rankMap = {};
+  sorted.forEach((seat, idx) => { rankMap[seat] = idx + 1; });
+
+  SEATS.forEach(seat => {
+    const el = document.getElementById(`seat-live-${seat}`);
+    if (!el) return;
+    const pts = lastPoints[seat];
+    const rank = rankMap[seat];
+    const fmtPts = pts.toLocaleString();
+    const rankColors = ['#d4af37','#888','#c87941','#888'];
+    el.innerHTML = `<span style="font-weight:700;color:${rankColors[rank-1]}">${rank}着</span>　<span style="color:var(--ink-soft)">${fmtPts}点</span>`;
+  });
 }
 
 /* 新規行追加時に持ち点のデフォルト値をセット */
@@ -1247,6 +1287,8 @@ window.addEventListener('DOMContentLoaded', () => {
   } else if (!READONLY) {
     addRound();
   }
+  // 初期表示時にも着順・最終持ち点を反映
+  if (!READONLY) updateSeatLiveDisplay();
 });
 </script>
 {% endblock %}
