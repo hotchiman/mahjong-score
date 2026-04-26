@@ -157,7 +157,7 @@
       対局結果 簡易入力
     </div>
 
-    <div style="padding:16px 20px;display:flex;flex-direction:column;gap:14px">
+    <div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
 
       <!-- ① 局概要入力エリア -->
       <div class="m-card">
@@ -196,16 +196,27 @@
             </div>
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-          <div>
-            <div class="m-field-label">放銃者</div>
-            <select id="m_houjuu_user" class="m-sel-full" disabled onchange="onModalHoujuuChange()">
-              <option value="">—</option>
-            </select>
+        <!-- 放銃者・和了点（左列）/ 役（右列）を2列グリッドで固定 -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:start">
+          <!-- 左列：放銃者 + 和了点 -->
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div>
+              <div class="m-field-label">放銃者</div>
+              <select id="m_houjuu_user" class="m-sel-full" disabled onchange="onModalHoujuuChange()">
+                <option value="">—</option>
+              </select>
+            </div>
+            <div>
+              <div class="m-field-label">和了点</div>
+              <select id="m_win_pts" class="m-sel-full" disabled>
+                <option value="">— 選択 —</option>
+              </select>
+            </div>
           </div>
+          <!-- 右列：役（スクロール可能エリア） -->
           <div>
             <div class="m-field-label">役</div>
-            <div id="m_yaku_list" style="display:flex;flex-direction:column;gap:3px">
+            <div id="m_yaku_list" style="display:flex;flex-direction:column;gap:3px;max-height:120px;overflow-y:auto">
               <div class="m-yaku-row" id="myi-0">
                 <select class="m-yaku-sel"><option value="">—</option></select>
                 <button type="button" class="m-del-yaku" onclick="removeMYaku('myi-0')">✕</button>
@@ -213,12 +224,6 @@
             </div>
             <button type="button" class="m-add-yaku-btn" onclick="addMYaku()">＋役追加</button>
           </div>
-        </div>
-        <div>
-          <div class="m-field-label">和了点</div>
-          <select id="m_win_pts" class="m-sel-full" disabled>
-            <option value="">— 和了者・放銃者を選択してください —</option>
-          </select>
         </div>
       </div>
 
@@ -259,8 +264,8 @@
 .m-sel-wide { font-size:12px; padding:4px 6px; border:1px solid #bbb; border-radius:4px; min-width:70px; }
 .m-sel-full { font-size:12px; padding:5px 6px; border:1px solid #bbb; border-radius:4px; width:100%; max-width:140px; }
 .m-num-sm { width:42px; font-size:12px; padding:4px 4px; border:1px solid #bbb; border-radius:4px; text-align:right; }
-.m-num-honba { width:34px; font-size:11px; padding:3px 4px; border:1px solid #bbb; border-radius:4px; text-align:right; }
-.m-num-xs { width:30px; font-size:11px; padding:3px 3px; border:1px solid #bbb; border-radius:3px; text-align:right; }
+.m-num-honba { width:34px; font-size:11px; padding:2px 3px; border:1px solid #bbb; border-radius:1px; text-align:right; font-family:var(--mono); }
+.m-num-xs { width:30px; font-size:11px; padding:2px 3px; border:1px solid #bbb; border-radius:1px; text-align:right; font-family:var(--mono); }
 .m-yaku-row { display:flex; gap:4px; align-items:center; }
 .m-yaku-sel { font-size:11px; padding:2px; border:1px solid #bbb; border-radius:3px; flex:1; }
 .m-del-yaku { font-size:10px; padding:1px 5px; border:1px solid #e57373; background:#ffebee; color:#c62828; cursor:pointer; border-radius:3px; }
@@ -269,7 +274,7 @@
 .m-check-row input[type="checkbox"] { flex-shrink:0; }
 .m-check-row label { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .m-check-row .m-furo-num { flex-shrink:0; margin-left:auto; }
-.m-furo-num { width:36px; min-width:36px; max-width:36px; font-size:11px; padding:3px 4px; border:1px solid #bbb; border-radius:3px; text-align:right; }
+.m-furo-num { width:36px; min-width:36px; max-width:36px; font-size:11px; padding:2px 3px; border:1px solid #bbb; border-radius:1px; text-align:right; font-family:var(--mono); flex-shrink:0; }
 </style>
 
 <style>
@@ -606,8 +611,10 @@ function buildRow(i, data) {
 
   // 入力ボタン列
   if (!ro) {
-    html += `<td class="td-base" style="text-align:center;padding:2px">
-      <button type="button" class="quick-btn" onclick="openModal(${i})" title="簡易入力">＋</button>
+    html += `<td class="td-base" style="padding:2px;vertical-align:middle">
+      <div style="display:flex;align-items:center;justify-content:center;height:100%">
+        <button type="button" class="quick-btn" onclick="openModal(${i})" title="簡易入力">＋</button>
+      </div>
     </td>`;
   } else {
     html += `<td class="td-base"></td>`;

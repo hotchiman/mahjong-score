@@ -34,7 +34,7 @@
     <!-- ① 合計戦績 -->
     <section style="margin-bottom:36px">
       <h2 class="section-title">合計戦績</h2>
-      <table class="data-table summary-table" style="border-radius:8px;overflow:hidden">
+      <table class="data-table summary-table" style="border-radius:8px;overflow:hidden;table-layout:fixed;width:100%">
         <thead style="display:none">
           <tr>
             <th class="col-s-rank">順位</th>
@@ -61,7 +61,7 @@
           </tr>
           <!-- アコーディオン行 -->
           <tr id="acc-{{ s.user.id }}" class="accordion-row" style="display:none">
-            <td colspan="5" style="padding:0 0 0 0;background:#f8f8f8">
+            <td colspan="5" style="padding:0;background:#f8f8f8;max-width:0;overflow:hidden">
               <table class="acc-table">
                 <thead style="display:none">
                   <tr>
@@ -200,11 +200,11 @@
 
 /* 合計戦績テーブル */
 .summary-table { table-layout:fixed; width:100%; }
-.col-s-rank { width:48px; }
-.col-s-name { width:auto; }
-.col-s-pts  { width:140px; }
-.col-s-avg  { width:100px; }
-.col-s-cnt  { width:110px; }
+.col-s-rank { width:44px; }
+.col-s-name { width:auto; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.col-s-pts  { width:130px; text-align:right; }
+.col-s-avg  { width:90px; }
+.col-s-cnt  { width:0; padding:0; border:0; }
 
 .summary-row:hover { background:inherit !important; }
 .summary-row td { padding:5px 12px; }
@@ -296,7 +296,7 @@
 .player-table td { padding:4px 8px; font-size:13px; }
 
 .col-rank { width:48px; white-space:nowrap; }
-.col-name { width:auto; min-width:80px; }
+.col-name { width:auto; min-width:100px; max-width:130px; }
 .col-pts  { width:110px; }
 .col-rah  { width:110px; font-family:var(--mono); font-size:12px; white-space:nowrap; text-align:left; padding-left:6px !important; }
 
