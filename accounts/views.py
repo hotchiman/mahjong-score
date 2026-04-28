@@ -472,6 +472,7 @@ def _session_context(room, session, members, rounds, yakus, readonly, session_nu
         'existing_rounds_json': json.dumps(existing_rounds) if existing_rounds is not None else 'null',
         'seats': [('east','起家'), ('south','南家'), ('west','西家'), ('north','北家')],
         'init_points': rule.init_points,
+        'draw_handling': rule.draw_handling,
     }
 
 

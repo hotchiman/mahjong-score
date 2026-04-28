@@ -408,6 +408,7 @@ const YAKUS    = {{ yakus_json|safe }};
 const READONLY = {{ readonly_json|safe }};
 const EXISTING = {{ existing_rounds_json|default_if_none:"null"|safe }};
 const INIT_PTS = {{ init_points|default:25000 }};
+const DRAW_HANDLING = '{{ draw_handling|default:"split_east" }}';
 
 let roundCount = 0;
 
@@ -515,6 +516,7 @@ function updateSeatLiveDisplay() {
     });
     return;
   }
+
   // 最終行の持ち点を取得
   const lastPoints = {};
   SEATS.forEach(seat => {
@@ -522,23 +524,57 @@ function updateSeatLiveDisplay() {
     lastPoints[seat] = parseInt(el ? (el.value || 0) : 0) || 0;
   });
 
-  // 持ち点を降順ソートして着順を決定（同点は起家優先）
-  const sorted = [...SEATS].sort((a, b) => {
-    if (lastPoints[b] !== lastPoints[a]) return lastPoints[b] - lastPoints[a];
-    return SEATS.indexOf(a) - SEATS.indexOf(b);
-  });
-  const rankMap = {};
-  sorted.forEach((seat, idx) => { rankMap[seat] = idx + 1; });
+  // 着順を計算（ルールの同点処理に応じる）
+  const rankMap = calcRankMap(lastPoints);
 
+  const rankColors = {1:'#c8a000', 2:'#2e86c1', 3:'#c87941', 4:'#922b21'};
   SEATS.forEach(seat => {
     const el = document.getElementById(`seat-live-${seat}`);
     if (!el) return;
-    const pts = lastPoints[seat];
+    const pts  = lastPoints[seat];
     const rank = rankMap[seat];
     const fmtPts = pts.toLocaleString();
-    const rankColors = ['#d4af37','#888','#c87941','#888'];
-    el.innerHTML = `<span style="font-weight:700;color:${rankColors[rank-1]}">${rank}着</span>　<span style="color:var(--ink-soft)">${fmtPts}点</span>`;
+    const rankLabel = typeof rank === 'number' ? `${rank}着` : rank;
+    el.innerHTML = `<span style="font-weight:700;color:${rankColors[typeof rank === 'number' ? rank : (Array.isArray(rank) ? rank[0] : 4)] || '#922b21'}">${rankLabel}</span>　<span style="color:var(--ink-soft)">${fmtPts}点</span>`;
   });
+}
+
+/* 同点処理ルールに応じた着順マップを返す */
+function calcRankMap(lastPoints) {
+  // 起家優先で仮着順を決める
+  const sorted = [...SEATS].sort((a, b) => {
+    if (lastPoints[b] !== lastPoints[a]) return lastPoints[b] - lastPoints[a];
+    return SEATS.indexOf(a) - SEATS.indexOf(b); // 起家優先
+  });
+
+  const rankMap = {};
+
+  if (DRAW_HANDLING === 'east_priority') {
+    // 起家優先：同点でも起家が上位
+    sorted.forEach((seat, idx) => { rankMap[seat] = idx + 1; });
+  } else {
+    // 分け系：同点グループは同着（上位者の順位）
+    const tmpRank = {};
+    sorted.forEach((seat, idx) => { tmpRank[seat] = idx + 1; });
+
+    // 同点グループを検出
+    const groups = {};
+    SEATS.forEach(seat => {
+      const pts = lastPoints[seat];
+      if (!groups[pts]) groups[pts] = [];
+      groups[pts].push(seat);
+    });
+
+    Object.values(groups).forEach(group => {
+      if (group.length === 1) {
+        rankMap[group[0]] = tmpRank[group[0]];
+      } else {
+        const topRank = Math.min(...group.map(s => tmpRank[s]));
+        group.forEach(s => { rankMap[s] = topRank; });
+      }
+    });
+  }
+  return rankMap;
 }
 
 /* 新規行追加時に持ち点のデフォルト値をセット */
@@ -1229,11 +1265,33 @@ function applyModal() {
 
   // ── 聴牌 ──
   if (isRyu) {
+    // 聴牌者リストを収集
+    const tenpaiSeats = [];
     document.getElementById('m_tenpai_checks').querySelectorAll('input[type=checkbox]').forEach(cb => {
       const seat = cb.dataset.seat;
       const sel  = document.getElementById(`round_${i}_${seat}_ryukyoku_state`);
       if (sel) sel.value = cb.checked ? 'tenpai' : 'noten';
+      if (cb.checked) tenpaiSeats.push(seat);
     });
+
+    // 聴牌人数に応じて局収支を設定
+    const notenSeats = SEATS.filter(s => !tenpaiSeats.includes(s));
+    const tenpaiCount = tenpaiSeats.length;
+
+    let tenpaiBalance = 0, notenBalance = 0;
+    if (tenpaiCount === 0 || tenpaiCount === 4) {
+      // 0人 or 4人：全員0
+      tenpaiBalance = 0; notenBalance = 0;
+    } else if (tenpaiCount === 1) {
+      tenpaiBalance = 3000; notenBalance = -1000;
+    } else if (tenpaiCount === 2) {
+      tenpaiBalance = 1500; notenBalance = -1500;
+    } else if (tenpaiCount === 3) {
+      tenpaiBalance = 1000; notenBalance = -3000;
+    }
+
+    tenpaiSeats.forEach(s => setV(`round_${i}_${s}_balance`, tenpaiBalance));
+    notenSeats.forEach(s => setV(`round_${i}_${s}_balance`, notenBalance));
   }
 
   // ── 立直者 ──
