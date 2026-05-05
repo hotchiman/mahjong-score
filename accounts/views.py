@@ -782,7 +782,7 @@ def _calc_user_stats(target_user, room_id, rule_id):
         'furo_rate':    safe_div(len(furo_list), total_kyoku),
         'riichi_rate':  safe_div(len(riichi_list), total_kyoku),
         'sanka_rate':   sanka_rate,
-        'avg_rank':     round(avg_rank_val, 2) if avg_rank_val else None,
+        'avg_rank':     round(avg_rank_val, 3) if avg_rank_val else None,
         'agari_income': agari_income,
         'houjuu_loss':  houjuu_loss,
         'top_rate':     top_rate,
