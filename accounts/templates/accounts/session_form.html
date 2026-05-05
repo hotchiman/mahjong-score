@@ -1303,7 +1303,7 @@ function applyModal() {
   // ── 供託点を反映 ──
   SEATS.forEach(s => {
     const val = kyotakuPts[s] || 0;
-    if (val !== 0) setV(`round_${i}_${s}_kyotaku_pts`, val);
+    setV(`round_${i}_${s}_kyotaku_pts`, val);
   });
 
   // ── 副露者 ──

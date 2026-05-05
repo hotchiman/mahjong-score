@@ -737,6 +737,36 @@ def _calc_user_stats(target_user, room_id, rule_id):
     avoid4_rate  = safe_div(rank_dist[1] + rank_dist[2] + rank_dist[3], battle_count)
     sanka_rate   = round(safe_div(len(riichi_list), total_kyoku) + safe_div(len(furo_list), total_kyoku), 2)
 
+    # 副露和了率、副露放銃率、平均副露回数、平均ドラ枚数、平均裏ドラ枚数、放銃時裏ドラ率、放銃時平均ドラ枚数、放銃時平均裏ドラ枚数
+    def safe_avg2(lst, key): return round(sum(key(x) for x in lst) / len(lst), 2) if lst else 0
+
+    furo_agari_list     = [p for p in prr_list if p.is_agari and p.is_furo]
+    furo_houjuu_list    = [p for p in prr_list if p.is_houjuu and p.is_furo]
+    furo_avg            = round(sum(p.furo_count for p in prr_list) / total_kyoku, 2) if total_kyoku else 0
+
+    agari_dora_list = RoundYaku.objects.filter(
+        round_result__in=[p.round_result for p in agari_list],
+        agari_user=target_user
+    )
+    all_dora_avg        = safe_avg2(agari_dora_list,  lambda p: p.dora + p.ura_dora + p.aka_dora)
+    ura_dora_avg        = round(sum(p.ura_dora for p in agari_dora_list) / len(riichi_agari), 2) if len(riichi_agari) else 0
+
+    ura_houju = RoundYaku.objects.filter(
+        round_result__in=[p.round_result for p in houjuu_list],
+        houjuu_user=target_user, ura_dora__gte=1
+    ).count() if houjuu_list else 0
+    houjuu_dora_list = RoundYaku.objects.filter(
+        round_result__in=[p.round_result for p in houjuu_list],
+        houjuu_user=target_user
+    )
+    houjuu_ura_dora_list = RoundYaku.objects.filter(
+        round_result__in=[p.round_result for p in houjuu_list],
+        houjuu_user=target_user, yakus__name='立直'
+    )
+    houjuu_all_dora_avg = safe_avg2(houjuu_dora_list,  lambda p: p.dora + p.ura_dora + p.aka_dora)
+    houjuu_ura_dora_avg = round(sum(p.ura_dora for p in houjuu_dora_list) / len(houjuu_ura_dora_list), 2) if len(houjuu_ura_dora_list) else 0
+
+
     return {
         'user':         target_user,
         'battle_count': battle_count,
@@ -770,6 +800,14 @@ def _calc_user_stats(target_user, room_id, rule_id):
         'juten_loss':           銃点損失,
         'adjusted_efficiency':  調整打点効率,
         'kyoku_balance_avg':    kyoku_balance_avg,
+        'furo_agari_rate':      safe_div(len(furo_agari_list), len(furo_list)),
+        'furo_houjuu_rate':     safe_div(len(furo_houjuu_list), len(furo_list)),
+        'furo_avg':             furo_avg,
+        'all_dora_avg':         all_dora_avg,
+        'ura_dora_avg':         ura_dora_avg,
+        'houjuu_ura_rate':      safe_div(ura_houju, len(houjuu_ura_dora_list)),
+        'houjuu_all_dora_avg':  houjuu_all_dora_avg,
+        'houjuu_ura_dora_avg':  houjuu_ura_dora_avg,
     }
 
 
