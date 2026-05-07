@@ -423,9 +423,9 @@
 .m-sel-wide { font-size:12px; padding:4px 6px; border:1px solid #bbb; border-radius:4px; min-width:70px; max-width:110px; }
 .m-sel-full { font-size:12px; padding:5px 6px; border:1px solid #bbb; border-radius:4px; width:100%; max-width:140px; }
 .m-num-sm { width:42px; font-size:12px; padding:4px 4px; border:1px solid #bbb; border-radius:4px; text-align:right; }
-.m-num-honba { width:38px !important; font-size:11px !important; padding:5px 3px !important; border:1px solid #bbb; border-radius:4px !important; text-align:right; font-family:var(--mono); }
-.m-num-xs { width:38px !important; font-size:11px !important; padding:5px 3px !important; border:1px solid #bbb; border-radius:4px !important; text-align:right; font-family:var(--mono); }
-.m-num-xs-han { width:42px !important; font-size:11px !important; padding:2px 3px !important; border:1px solid #bbb; border-radius:4px !important; text-align:right; font-family:var(--mono); }
+.m-num-honba { width:38px !important; font-size:13px !important; padding:3px 3px !important; border:1px solid #bbb; border-radius:4px !important; text-align:right; font-family:var(--mono); }
+.m-num-xs { width:38px !important; font-size:13px !important; padding:3px 3px !important; border:1px solid #bbb; border-radius:4px !important; text-align:right; font-family:var(--mono); }
+.m-num-xs-han { width:42px !important; font-size:13px !important; padding:3px 3px !important; border:1px solid #bbb; border-radius:4px !important; text-align:right; font-family:var(--mono); }
 .m-num-pts { text-align:center !important; width:70px !important; font-size:14px !important; padding:2px 1px !important; border:1px solid #bbb; border-radius:4px !important; text-align:right; font-family:var(--mono); }
 .m-yaku-row { display:flex; gap:4px; align-items:center; }
 .m-yaku-sel { font-size:11px; padding:2px; border:1px solid #bbb; border-radius:3px; flex:1; }
@@ -435,8 +435,8 @@
 .m-check-row input[type="checkbox"] { flex-shrink:0; }
 .m-check-row label { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .m-check-row .m-furo-num { flex-shrink:0; margin-right:15px; }
-.m-furo-num { width:38px !important; font-size:11px !important; padding:5px 3px !important; border:1px solid #bbb; border-radius:4px !important; text-align:right; font-family:var(--mono); flex-shrink:0; }
-.m-num-honba:focus, .m-num-xs:focus, .m-num-xs-han:focus, .m-furo-num:focus, .m-num-pts:focus { font-size: 16px !important; }
+.m-furo-num { width:38px !important; font-size:13px !important; padding:3px 3px !important; border:1px solid #bbb; border-radius:4px !important; text-align:right; font-family:var(--mono); flex-shrink:0; }
+.m-num-honba:focus, .m-num-xs:focus, .m-num-xs-han:focus, .m-furo-num:focus, .m-num-pts:focus { font-size: 16px !important; outline: none; border:1px solid blue; }
 </style>
 
 <style>
@@ -919,6 +919,41 @@ function addRound(data) {
     } else {
       // 新規行：デフォルト持ち点をセット
       initPointsAfterForRow(roundCount);
+
+
+      // 局・本場をセット
+      const rouMaster  = document.getElementById(`round_${roundCount}_master`);
+      const rouHonba   = document.getElementById(`round_${roundCount}_honba`);
+      const rouKyotaku = document.getElementById(`round_${roundCount}_kyotaku`);
+
+      if (roundCount === 1) {
+        // 1行目は「東1局0本場 供託0」スタート
+        rouMaster.options[1].selected = true;
+        rouHonba.value = '';
+        rouKyotaku.value = '';
+      } else {
+        // 2行目以降は前局を参照し、本場や供託を設定する
+        const rouPreMaster   = document.getElementById(`round_${roundCount-1}_master`);
+        const rouPreHonba    = document.getElementById(`round_${roundCount-1}_honba`);
+        const rouPreKyotaku  = document.getElementById(`round_${roundCount-1}_kyotaku`);
+        const rouPreRyukyoku = document.getElementById(`round_${roundCount-1}_ryukyoku`);
+
+        if (rouPreRyukyoku.checked) {
+          let rouPreRiichiCount = 0;
+          // 前局が流局の場合、本場は+1で供託は前局分＋前局の立直棒分
+          SEATS.forEach(seat => {
+            const rouRiichi = document.getElementById(`round_${roundCount-1}_${seat}_riichi`);
+            if (rouRiichi.checked) rouPreRiichiCount++;
+          });
+          rouMaster.options[rouPreMaster.value].selected = true;
+          rouHonba.value = Number(rouPreHonba.value) + 1;
+          rouKyotaku.value = Number(rouPreKyotaku.value) + rouPreRiichiCount;
+        } else {
+          rouMaster.options[Number(rouPreMaster.value)+1].selected = true;
+          rouHonba.value = '';
+          rouKyotaku.value = '';
+        }
+      }
     }
   }
 }
@@ -1493,14 +1528,23 @@ function openRankUpModal() {
 
   // 局マスタ選択肢
   const ruMaster = document.getElementById('ru_master');
+  ruMaster.innerHTML = '';
   if (ruMaster) {
     ROUNDS.forEach(r => {
       const o = document.createElement('option');
       o.value = r.id; o.textContent = r.name;
       ruMaster.appendChild(o);
-      ruMaster.value = '8';
     });
   }
+  // 局・本場・供託の初期値を設定
+  const lastMaster  = document.getElementById(`round_${roundCount}_master`);
+  const lastHonba   = document.getElementById(`round_${roundCount}_honba`);
+  const lastKyotaku = document.getElementById(`round_${roundCount}_kyotaku`);
+  const ruHonba     = document.getElementById('ru_honba');
+  const ruKyotaku   = document.getElementById('ru_kyotaku');
+  ruMaster.value  = lastMaster.value;
+  ruHonba.value   = lastHonba.value;
+  ruKyotaku.value = lastKyotaku.value;
 
   // 座席ユーザ名・持ち点を現在の値から取得
   SEATS.forEach(seat => {
