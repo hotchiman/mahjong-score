@@ -173,10 +173,10 @@
             <option value="">選択</option>
           </select>
           <span style="font-size:12px;white-space:nowrap">局</span>
-          <input type="number" id="m_honba" class="m-num-honba" placeholder="0" min="0">
+          <input type="number" inputmode="numeric" id="m_honba" class="m-num-honba" placeholder="0" min="0">
           <span style="font-size:12px;white-space:nowrap">本場</span>
           <span style="font-size:12px;white-space:nowrap;margin-left:8px">供託</span>
-          <input type="number" id="m_kyotaku" class="m-num-honba" placeholder="0" min="0">
+          <input type="number" inputmode="numeric" id="m_kyotaku" class="m-num-honba" placeholder="0" min="0">
         </div>
         <div style="margin-top:10px;display:flex;align-items:center;gap:8px">
           <input type="checkbox" id="m_ryukyoku" onchange="toggleRyukyoku()">
@@ -196,10 +196,10 @@
           <div>
             <div class="m-field-label">翻 / ドラ（表/裏/赤）</div>
             <div style="display:flex;gap:4px">
-              <input type="number" id="m_han"  class="m-num-xs-han" min="0">
-              <input type="number" id="m_dora" class="m-num-xs" min="0">
-              <input type="number" id="m_ura"  class="m-num-xs" min="0">
-              <input type="number" id="m_aka"  class="m-num-xs" min="0">
+              <input type="number" inputmode="numeric" id="m_han"  class="m-num-xs-han" min="0">
+              <input type="number" inputmode="numeric" id="m_dora" class="m-num-xs" min="0">
+              <input type="number" inputmode="numeric" id="m_ura"  class="m-num-xs" min="0">
+              <input type="number" inputmode="numeric" id="m_aka"  class="m-num-xs" min="0">
             </div>
           </div>
         </div>
@@ -299,10 +299,10 @@
           <select id="ru_master" class="m-sel-wide" onchange="updateRankUpRanks(); winPtsReset();">
           </select>
           <span style="font-size:12px">局</span>
-          <input type="number" id="ru_honba" class="m-num-honba" placeholder="0" min="0" oninput="updateRankUpRanks()">
+          <input type="number" inputmode="numeric" id="ru_honba" class="m-num-honba" placeholder="0" min="0" oninput="updateRankUpRanks()">
           <span style="font-size:12px">本場</span>
           <span style="font-size:12px;margin-left:6px">供託</span>
-          <input type="number" id="ru_kyotaku" class="m-num-honba" placeholder="0" min="0" oninput="updateRankUpRanks()">
+          <input type="number" inputmode="numeric" id="ru_kyotaku" class="m-num-honba" placeholder="0" min="0" oninput="updateRankUpRanks()">
         </div>
         <!-- 座席グリッド -->
         <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:5px">
@@ -315,7 +315,7 @@
             <div id="ru_name_{{ seat_key }}" style="font-size:12px;font-weight:700;margin-bottom:7px;color:var(--ink);text-align:center">—</div>
             <div style="display:flex;flex-direction:column";align-items:center;gap:6px;margin-bottom:4px;text-align:center">
               <span id="ru_rank_{{ seat_key }}" style="font-family:var(--mono);font-size:12px;font-weight:700;min-width:28px;text-align:center"></span>
-              <input type="number" id="ru_pts_{{ seat_key }}" class="m-num-pts" step="100" 
+              <input type="number" inputmode="numeric" id="ru_pts_{{ seat_key }}" class="m-num-pts" step="100" 
                 style="width:70px;font-size:12px;font-family:var(--mono);display: block; margin: 0 auto"
                 placeholder="0" oninput="updateRankUpRanks()">
             </div>
@@ -814,22 +814,22 @@ function buildRow(i, data) {
   function numPts(name, val) {
     if (ro) return `<span style="font-family:var(--mono)">${val ?? 0}</span>`;
     const v = (isExisting && val != null) ? val : '';
-    return `<input type="number" id="${name}" value="${v}" step="100" placeholder="0" class="inp-pts" oninput="recalcAllPoints()">`;
+    return `<input type="number" inputmode="numeric" id="${name}" value="${v}" step="100" placeholder="0" class="inp-pts" oninput="recalcAllPoints()">`;
   }
   function numPtsRo(name, val) {
     if (ro) return `<span style="font-family:var(--mono);font-weight:700">${val ?? 0}</span>`;
     const v = (isExisting && val != null) ? val : '';
-    return `<input type="number" id="${name}" value="${v}" class="inp-pts-ro" readonly tabindex="-1">`;
+    return `<input type="number" inputmode="numeric" id="${name}" value="${v}" class="inp-pts-ro" readonly tabindex="-1">`;
   }
   function numSm(name, val) {
     if (ro) return `<span style="font-family:var(--mono)">${val ?? 0}</span>`;
     const v = (isExisting && val != null) ? val : '';
-    return `<input type="number" id="${name}" value="${v}" placeholder="0" class="inp-sm">`;
+    return `<input type="number" inputmode="numeric" id="${name}" value="${v}" placeholder="0" class="inp-sm">`;
   }
   function numHonba(name, val) {
     if (ro) return `<span style="font-size:10px">${val ?? 0}</span>`;
     const v = (isExisting && val != null) ? val : '';
-    return `<input type="number" id="${name}" value="${v}" placeholder="0" class="inp-honba">`;
+    return `<input type="number" inputmode="numeric" id="${name}" value="${v}" placeholder="0" class="inp-honba">`;
   }
   function selHTML(name, opts, val, cls) {
     if (ro) { const f = opts.find(o => o[0] == val); return f ? f[1] : '—'; }
@@ -1180,7 +1180,7 @@ function buildModalCheckboxes(rowIdx) {
             ${isChecked ? 'checked' : ''}
             onchange="onFuroCheck('${uid}')">
           <label for="mfc_${uid}">${uname}</label>
-          <input type="number" id="mfn_${uid}" class="m-furo-num"
+          <input type="number" inputmode="numeric" id="mfn_${uid}" class="m-furo-num"
             value="${isChecked ? countVal : ''}"
             min="0"
             style="background:${isChecked ? 'white' : '#eee'}"
