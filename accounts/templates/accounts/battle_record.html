@@ -1,7 +1,7 @@
 {% extends "accounts/base.html" %}
 {% block title %}対戦記録{% endblock %}
 {% block body %}
-<div class="app-shell" ontouchstart = "">
+<div class="app-shell">
   <header class="topbar">
     <a href="{% url 'game_list' %}" class="topbar-brand">🀄 MJS</a>
     <nav class="topbar-nav">
@@ -193,17 +193,17 @@
         <div class="stat-card-title">📊 基本情報</div>
         <dl class="stat-dl">
           <dt>記録対戦数</dt><dd>{{ stats.battle_count }} 戦</dd>
-          <dt class="bal_oya"><span class="hov">和了率</span><span class="bal_bot">和了回数 / 総局数<br>玉の平均値：21.40%<br>段位別平均値：21.01% / 21.86% / 22.04% / 22.21% / 22.31% / 22.54%</span></dt><dd>{{ stats.agari_rate|floatformat:2 }}%</dd>
-          <dt class="bal_oya"><span class="hov">放銃率</span><span class="bal_bot">放銃回数 / 総局数<br>玉の平均値：14.12%<br>段位別平均値：14.85% / 13.44% / 12.82% / 12.33% / 12.00% / 11.59%</span></dt><dd>{{ stats.houjuu_rate|floatformat:2 }}%</dd>
-          <dt class="bal_oya"><span class="hov">ツモ率</span><span class="bal_bot">ツモ回数 / 和了回数<br>玉の平均値：36.77%<br>段位別平均値：36.87% / 36.73% / 36.59% / 36.44% / 36.43% / 36.33%</span></dt><dd>{{ stats.tsumo_rate|floatformat:2 }}%</dd>
-          <dt class="bal_oya"><span class="hov">ダマ率</span><span class="bal_bot">門前ダマ和了回数 / 和了回数<br>玉の平均値：11.67%<br>段位別平均値：11.36% / 11.91% / 12.28% / 12.52% / 12.55% / 12.66%</span></dt><dd>{{ stats.dama_rate|floatformat:2 }}%</dd>
-          <dt class="bal_oya"><span class="hov">流局率</span><span class="bal_bot">流局回数 / 総局数<br>玉の平均値：12.95%<br>段位別平均値：12.79% / 13.05% / 13.24% / 13.36% / 13.47% / 13.55%</span></dt><dd>{{ stats.ryukyoku_rate|floatformat:2 }}%</dd>
-          <dt class="bal_oya"><span class="hov">流局聴牌率</span><span class="bal_top">流局聴牌回数 / 流局回数<br>玉の平均値：46.87%<br>段位別平均値：48.07% / 45.90% / 44.67% / 43.76% / 43.21% / 42.72%</span></dt><dd>{{ stats.tenpai_rate|floatformat:2 }}%</dd>
-          <dt class="bal_oya"><span class="hov">副露率</span><span class="bal_top">副露回数 / 総局数<br>玉の平均値：31.72%<br>段位別平均値：31.70% / 31.60% / 31.75% / 31.93% / 32.10% / 32.42%</span></dt><dd>{{ stats.furo_rate|floatformat:2 }}%</dd>
-          <dt class="bal_oya"><span class="hov">立直率</span><span class="bal_top">立直回数 / 総局数<br>玉の平均値：19.20%<br>段位別平均値：19.33% / 19.19% / 18.95% / 18.70% / 18.65% / 18.50%</span></dt><dd>{{ stats.riichi_rate|floatformat:2 }}%</dd>
+          <dt>和了率</dt><dd class="bal_oya"><span class="hov_right">{{ stats.agari_rate|floatformat:2 }}%</span><span class="bal_bot_right">和了回数 / 総局数<br>玉の平均値：21.40%<br>段位別平均値：21.01% / 21.86% / 22.04% / 22.21% / 22.31% / 22.54%</span></dd>
+          <dt>放銃率</dt><dd class="bal_oya"><span class="hov_right">{{ stats.houjuu_rate|floatformat:2 }}%</span><span class="bal_bot_right">放銃回数 / 総局数<br>玉の平均値：14.12%<br>段位別平均値：14.85% / 13.44% / 12.82% / 12.33% / 12.00% / 11.59%</span></dd>
+          <dt>ツモ率</dt><dd class="bal_oya"><span class="hov_right">{{ stats.tsumo_rate|floatformat:2 }}%</span><span class="bal_bot_right">ツモ回数 / 和了回数<br>玉の平均値：36.77%<br>段位別平均値：36.87% / 36.73% / 36.59% / 36.44% / 36.43% / 36.33%</span></dd>
+          <dt>ダマ率</dt><dd class="bal_oya"><span class="hov_right">{{ stats.dama_rate|floatformat:2 }}%</span><span class="bal_bot_right">門前ダマ和了回数 / 和了回数<br>玉の平均値：11.67%<br>段位別平均値：11.36% / 11.91% / 12.28% / 12.52% / 12.55% / 12.66%</span></dd>
+          <dt>流局率</dt><dd class="bal_oya"><span class="hov_right">{{ stats.ryukyoku_rate|floatformat:2 }}%</span><span class="bal_bot_right">流局回数 / 総局数<br>玉の平均値：12.95%<br>段位別平均値：12.79% / 13.05% / 13.24% / 13.36% / 13.47% / 13.55%</span></dd>
+          <dt>流局聴牌率</dt><dd class="bal_oya"><span class="hov_right">{{ stats.tenpai_rate|floatformat:2 }}%</span><span class="bal_top_right">流局聴牌回数 / 流局回数<br>玉の平均値：46.87%<br>段位別平均値：48.07% / 45.90% / 44.67% / 43.76% / 43.21% / 42.72%</span></dd>
+          <dt>副露率</dt><dd class="bal_oya"><span class="hov_right">{{ stats.furo_rate|floatformat:2 }}%</span><span class="bal_top_right">副露回数 / 総局数<br>玉の平均値：31.72%<br>段位別平均値：31.70% / 31.60% / 31.75% / 31.93% / 32.10% / 32.42%</span></dd>
+          <dt>立直率</dt><dd class="bal_oya"><span class="hov_right">{{ stats.riichi_rate|floatformat:2 }}%</span><span class="bal_top_right">立直回数 / 総局数<br>玉の平均値：19.20%<br>段位別平均値：19.33% / 19.19% / 18.95% / 18.70% / 18.65% / 18.50%</span></dd>
           <dt>平均順位</dt><dd>{% if stats.avg_rank %}{{ stats.avg_rank|floatformat:3 }} 位{% else %}—{% endif %}</dd>
-          <dt class="bal_oya"><span class="hov">平均和了</span><span class="bal_top">和了点の平均（供託込み）<br>玉の平均値：6570<br>段位別平均値：6571 / 6597 / 6566 / 6530 / 6519 / 6485</span></dt><dd>{{ stats.agari_income }} 点</dd>
-          <dt class="bal_oya"><span class="hov">平均放銃</span><span class="bal_top">放銃点の平均（供託込み）<br>玉の平均値：5638<br>段位別平均値：5703 / 5568 / 5528 / 5493 / 5469 / 5443</span></dt><dd>{{ stats.houjuu_loss }} 点</dd>
+          <dt>平均和了</dt><dd class="bal_oya"><span class="hov_right">{{ stats.agari_income }}</span><span class="bal_top_right">和了点の平均（供託込み）<br>玉の平均値：6570<br>段位別平均値：6571 / 6597 / 6566 / 6530 / 6519 / 6485</span></dd>
+          <dt>平均放銃</dt><dd class="bal_oya"><span class="hov_right">{{ stats.houjuu_loss }}</span><span class="bal_top_right">放銃点の平均（供託込み）<br>玉の平均値：5638<br>段位別平均値：5703 / 5568 / 5528 / 5493 / 5469 / 5443</span></dd>
         </dl>
       </div>
 
@@ -211,14 +211,14 @@
       <div class="card stat-card">
         <div class="stat-card-title">🎯 立直</div>
         <dl class="stat-dl">
-          <dt class="bal_oya"><span class="hov">立直率</span><span class="bal_bot">立直回数 / 総局数<br>玉の平均値：19.20%<br>段位別平均値：19.33% / 19.19% / 18.95% / 18.70% / 18.65% / 18.50%</span></dt><dd>{{ stats.riichi_rate|floatformat:2 }}%</dd>
-          <dt class="bal_oya"><span class="hov">立直和了率</span><span class="bal_bot">立直和了回数 / 立直回数<br>玉の平均値：49.40%<br>段位別平均値：48.65% / 50.29% / 50.61% / 51.10% / 51.16% / 51.51%</span></dt><dd>{{ stats.riichi_agari_rate|floatformat:2 }}%</dd>
-          <dt class="bal_oya"><span class="hov">立直放銃率</span><span class="bal_bot">立直放銃回数（立直瞬間は含まない） / 立直回数<br>玉の平均値：10.54%<br>段位別平均値：10.75% / 10.26% / 10.22% / 10.16% / 10.13% / 10.08%</span></dt><dd>{{ stats.riichi_houjuu_rate|floatformat:2 }}%</dd>
-          <dt class="bal_oya"><span class="hov">立直収支</span><span class="bal_bot">立直時の収支（供託込み） / 立直回数<br>玉の平均値：2954<br>段位別平均値：2832 / 3047 / 3076 / 3111 / 3128 / 3159</span></dt><dd>{{ stats.riichi_balance }} 点</dd>
-          <dt class="bal_oya"><span class="hov">立直収入</span><span class="bal_bot">立直和了収入（供託込み） / 立直和了回数<br>玉の平均値：8117<br>段位別平均値：8105 / 8149 / 8134 / 8118 / 8111 / 8094</span></dt><dd>{{ stats.riichi_income }} 点</dd>
-          <dt class="bal_oya"><span class="hov">立直支出</span><span class="bal_bot">立直時の放銃支出（供託込み） / 立直放銃回数<br>玉の平均値：6994<br>段位別平均値：7028 / 6950 / 6939 / 6920 / 6915 / 6895</span></dt><dd>{{ stats.riichi_loss }} 点</dd>
-          <dt class="bal_oya"><span class="hov">立直流局率</span><span class="bal_top">立直流局回数 / 立直回数<br>玉の平均値：14.28%<br>段位別平均値：14.46% / 14.06% / 13.96% / 13.85% / 13.86% / 13.74%</span></dt><dd>{{ stats.riichi_ryukyoku_rate|floatformat:2 }}%</dd>
-          <dt class="bal_oya"><span class="hov">一発率</span><span class="bal_top">一発回数 / 立直和了回数<br>玉の平均値：20.03%<br>段位別平均値：20.06% / 20.03% / 19.99% / 19.91% / 19.86% / 19.82%</span></dt><dd>{{ stats.ippatsu_rate|floatformat:2 }}%</dd>
+          <dt>立直率</dt><dd class="bal_oya"><span class="hov_right">{{ stats.riichi_rate|floatformat:2 }}%</span><span class="bal_bot_right">立直回数 / 総局数<br>玉の平均値：19.20%<br>段位別平均値：19.33% / 19.19% / 18.95% / 18.70% / 18.65% / 18.50%</span></dd>
+          <dt>立直和了率</dt><dd class="bal_oya"><span class="hov_right">{{ stats.riichi_agari_rate|floatformat:2 }}%</span><span class="bal_bot_right">立直和了回数 / 立直回数<br>玉の平均値：49.40%<br>段位別平均値：48.65% / 50.29% / 50.61% / 51.10% / 51.16% / 51.51%</span></dd>
+          <dt>立直放銃率</dt><dd class="bal_oya"><span class="hov_right">{{ stats.riichi_houjuu_rate|floatformat:2 }}%</span><span class="bal_bot_right">立直放銃回数（立直瞬間は含まない） / 立直回数<br>玉の平均値：10.54%<br>段位別平均値：10.75% / 10.26% / 10.22% / 10.16% / 10.13% / 10.08%</span></dd>
+          <dt>立直収支</dt><dd class="bal_oya"><span class="hov_right">{{ stats.riichi_balance }}</span><span class="bal_bot_right">立直時の収支（供託込み） / 立直回数<br>玉の平均値：2954<br>段位別平均値：2832 / 3047 / 3076 / 3111 / 3128 / 3159</span></dd>
+          <dt>立直収入</dt><dd class="bal_oya"><span class="hov_right">{{ stats.riichi_income }}</span><span class="bal_bot_right">立直和了収入（供託込み） / 立直和了回数<br>玉の平均値：8117<br>段位別平均値：8105 / 8149 / 8134 / 8118 / 8111 / 8094</span></dd>
+          <dt>立直支出</dt><dd class="bal_oya"><span class="hov_right">{{ stats.riichi_loss }}</span><span class="bal_bot_right">立直時の放銃支出（供託込み） / 立直放銃回数<br>玉の平均値：6994<br>段位別平均値：7028 / 6950 / 6939 / 6920 / 6915 / 6895</span></dd>
+          <dt>立直流局率</dt><dd class="bal_oya"><span class="hov_right">{{ stats.riichi_ryukyoku_rate|floatformat:2 }}%</span><span class="bal_top_right">立直流局回数 / 立直回数<br>玉の平均値：14.28%<br>段位別平均値：14.46% / 14.06% / 13.96% / 13.85% / 13.86% / 13.74%</span></dd>
+          <dt>一発率</dt><dd class="bal_oya"><span class="hov_right">{{ stats.ippatsu_rate|floatformat:2 }}%</span><span class="bal_top_right">一発回数 / 立直和了回数<br>玉の平均値：20.03%<br>段位別平均値：20.06% / 20.03% / 19.99% / 19.91% / 19.86% / 19.82%</span></dd>
         </dl>
       </div>
 
@@ -226,11 +226,11 @@
       <div class="card stat-card">
         <div class="stat-card-title">📈 ほか</div>
         <dl class="stat-dl">
-          <dt class="bal_oya"><span class="hov">裏ドラ率</span><span class="bal_bot">裏ドラがある和了回数 / 立直和了回数<br>玉の平均値：31.85%<br>段位別平均値：31.77% / 31.98% / 31.97% / 31.96% / 31.95% / 31.99%</span></dt><dd>{{ stats.ura_rate|floatformat:2 }}%</dd>
-          <dt class="bal_oya"><span class="hov">打点効率</span><span class="bal_bot">和了率 × 平均和了<br>玉の平均値：1403<br>段位別平均値：1377 / 1440 / 1445 / 1449 / 1453 / 1460</span></dt><dd>{{ stats.daten_efficiency }}</dd>
-          <dt class="bal_oya"><span class="hov">銃点損失</span><span class="bal_bot">放銃率 × 平均放銃<br>玉の平均値：799<br>段位別平均値：849 / 750 / 710 / 678 / 657 / 631</span></dt><dd>{{ stats.juten_loss }}</dd>
-          <dt class="bal_oya"><span class="hov">調整打点効率</span><span class="bal_bot">打点効率 - 銃点損失<br>玉の平均値：604<br>段位別平均値：528 / 690 / 736 / 770 / 796 / 829</span></dt><dd>{{ stats.adjusted_efficiency }}</dd>
-          <dt class="bal_oya"><span class="hov">局収支</span><span class="bal_bot">局の収支平均<br>玉の平均値：-58<br>段位別平均値：-131 / 28 / 67 / 99 / 122 / 153</span></dt><dd>{{ stats.kyoku_balance_avg }} 点</dd>
+          <dt>裏ドラ率</dt><dd class="bal_oya"><span class="hov_right">{{ stats.ura_rate|floatformat:2 }}%</span><span class="bal_bot_right">裏ドラがある和了回数 / 立直和了回数<br>玉の平均値：31.85%<br>段位別平均値：31.77% / 31.98% / 31.97% / 31.96% / 31.95% / 31.99%</span></dd>
+          <dt>打点効率</dt><dd class="bal_oya"><span class="hov_right">{{ stats.daten_efficiency }}</span><span class="bal_bot_right">和了率 × 平均和了<br>玉の平均値：1403<br>段位別平均値：1377 / 1440 / 1445 / 1449 / 1453 / 1460</span></dd>
+          <dt>銃点損失</dt><dd class="bal_oya"><span class="hov_right">{{ stats.juten_loss }}</span><span class="bal_bot_right">放銃率 × 平均放銃<br>玉の平均値：799<br>段位別平均値：849 / 750 / 710 / 678 / 657 / 631</span></dd>
+          <dt>調整打点効率</dt><dd class="bal_oya"><span class="hov_right">{{ stats.adjusted_efficiency }}</span><span class="bal_bot_right">打点効率 - 銃点損失<br>玉の平均値：604<br>段位別平均値：528 / 690 / 736 / 770 / 796 / 829</span></dd>
+          <dt>局収支</dt><dd class="bal_oya"><span class="hov_right">{{ stats.kyoku_balance_avg }}</span><span class="bal_bot_right">局の収支平均<br>玉の平均値：-58<br>段位別平均値：-131 / 28 / 67 / 99 / 122 / 153</span></dd>
           <dt>総局数</dt><dd>{{ stats.total_kyoku }} 局</dd>
           {% if stats.total_pts is not None %}
           <dt>獲得合計pts</dt>
@@ -343,15 +343,17 @@
   padding: 7px 10px;
   min-width: 120px;
   color: white;
-  background: rgba(0, 0, 0, 0.50);
+  background: rgba(0, 0, 0, 0.60);
   left : -5%;
   bottom : 100%;
   margin-bottom : 12px;
   font-size: 90%;
+  border-radius: 5px;
+  z-index: 9999;
   text-align: center;
 }
 .bal_top:after{
-  border-top: 12px solid rgba(0, 0, 0, 0.50);
+  border-top: 12px solid rgba(0, 0, 0, 0.60);
   border-left: 10px solid transparent;
   border-right: 10px solid transparent;
   bottom: -12px;
@@ -374,6 +376,8 @@
   top : 100%;
   margin-top : 12px;
   font-size: 90%;
+  border-radius: 5px;
+  z-index: 9999;
   text-align: center;
 }
 .bal_bot:after{
@@ -382,6 +386,66 @@
   border-right: 10px solid transparent;
   top: -12px;
   left : 5%;
+  content: "";
+  position: absolute;
+}
+.hov_right:hover + .bal_top_right {
+  display: inline;
+}
+.bal_top_right {
+  position: absolute;
+  display: none;
+  margin-left: calc(0% - 120px);
+  padding: 7px 10px;
+  min-width: 120px;
+  color: white;
+  background: rgba(0, 0, 0, 0.60);
+  right : -5%;
+  bottom : 100%;
+  margin-bottom : 12px;
+  font-size: 80%;
+  font-family:var(--sans);
+  font-weight:400;
+  border-radius: 5px;
+  z-index: 9999;
+  text-align: center;
+}
+.bal_top_right:after{
+  border-top: 12px solid rgba(0, 0, 0, 0.60);
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  bottom: -12px;
+  right : 5%;
+  content: "";
+  position: absolute;
+}
+.hov_right:hover + .bal_bot_right {
+  display: inline;
+}
+.bal_bot_right {
+  position: absolute;
+  display: none;
+  margin-left: calc(0% - 112px);
+  padding: 8px 10px;
+  min-width: 120px;
+  color: white;
+  background: rgba(0, 0, 0, 0.60);
+  right : -5%;
+  top : 100%;
+  margin-top : 12px;
+  font-size: 80%;
+  font-family:var(--sans);
+  font-weight:400;
+  border-radius: 5px;
+  z-index: 9999;
+  text-align: center;
+}
+.bal_bot_right:after{
+  border-bottom: 12px solid rgba(0, 0, 0, 0.60);
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  top: -12px;
+  right : 5%;
   content: "";
   position: absolute;
 }
