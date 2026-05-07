@@ -944,11 +944,11 @@ function addRound(data) {
           let rentyanFlg = false;
           // 前局が流局の場合、本場は+1で供託は前局分＋前局の立直棒分
           SEATS.forEach(seat => {
-            cnt++;
             const rouPreRiichi        = document.getElementById(`round_${roundCount-1}_${seat}_riichi`);
             const rouPreRyukyokuState = document.getElementById(`round_${roundCount-1}_${seat}_ryukyoku_state`);
             if (rouPreRiichi.checked) rouPreRiichiCount++;
-            if (Number(rouPreMaster.value)%4 === cnt && rouPreRyukyokuState.value === 'tenpai') rentyanFlg = true;
+            if ((Number(rouPreMaster.value)-1)%4 === cnt && rouPreRyukyokuState.value === 'tenpai') rentyanFlg = true;
+            cnt++;
           });
           if (rentyanFlg) {
             rouMaster.options[rouPreMaster.value].selected = true;
