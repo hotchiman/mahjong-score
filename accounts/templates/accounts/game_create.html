@@ -49,6 +49,7 @@
               data-return="{{ rule.return_points }}"
               data-uma2="{{ rule.uma2 }}"
               data-uma1="{{ rule.uma1 }}"
+              data-uma-type="{{ rule.uma_type }}"
               data-kyotaku-key="{{ rule.kyotaku_handling }}"
               data-draw-key="{{ rule.draw_handling }}"
               {% if request.POST.rule == rule.id|stringformat:"s" %}selected{% endif %}>
@@ -69,6 +70,7 @@
                   <tr><td class="rdt-label">基本ルール</td><td class="rdt-val" id="rd-basic"></td></tr>
                   <tr><td class="rdt-label">終局時供託の扱い</td><td class="rdt-val" id="rd-kyotaku"></td></tr>
                   <tr><td class="rdt-label">同点の扱い</td><td class="rdt-val" id="rd-draw"></td></tr>
+                  <tr id="rd-uma-detail-row" style="display:none"><td class="rdt-label">ウマ詳細</td><td class="rdt-val" id="rd-uma-detail"></td></tr>
                 </tbody>
               </table>
             </div>
@@ -101,6 +103,12 @@ const DRAW_LABELS = {
   'split':         '順位点を人数で分ける、端数も均等に分配',
   'east_priority': '起家（東1局東家）に近い方から上位とする'
 };
+const RENGO_A_UMA_DETAIL =
+  '浮き4人: ウマなし（全員±0） / ' +
+  '浮き3人: 1着+8.0, 2着+3.0, 3着+1.0, 4着-12.0 / ' +
+  '浮き2人: 1着+8.0, 2着+4.0, 3着-4.0, 4着-8.0 / ' +
+  '浮き1人: 1着+12.0, 2着-1.0, 3着-3.0, 4着-8.0 / ' +
+  '浮き0人: ウマなし（全員±0）';
 
 function updateAccordion(select) {
   const accordion = document.getElementById('rule-accordion');
@@ -109,14 +117,33 @@ function updateAccordion(select) {
 
   const initPts    = Number(opt.dataset.init).toLocaleString();
   const retPts     = Number(opt.dataset.return).toLocaleString();
+  const umaType    = opt.dataset.umaType;
   const uma2       = opt.dataset.uma2;
   const uma1       = opt.dataset.uma1;
   const kyotakuKey = opt.dataset.kyotakuKey;
   const drawKey    = opt.dataset.drawKey;
 
-  document.getElementById('rd-basic').textContent    = `${initPts}点持ち${retPts}点返し、${Math.abs(uma2)}-${uma1}`;
-  document.getElementById('rd-kyotaku').textContent  = KYOTAKU_LABELS[kyotakuKey] || kyotakuKey;
-  document.getElementById('rd-draw').textContent     = DRAW_LABELS[drawKey]    || drawKey;
+  let umaStr;
+  if (umaType === 'rengo_a') {
+    umaStr = '浮き人数連動ウマ（連盟Aルール）';
+  } else {
+    umaStr = `${Math.abs(uma2)}-${uma1}`;
+  }
+
+  document.getElementById('rd-basic').textContent   = `${initPts}点持ち${retPts}点返し、${umaStr}`;
+  document.getElementById('rd-kyotaku').textContent = KYOTAKU_LABELS[kyotakuKey] || kyotakuKey;
+  document.getElementById('rd-draw').textContent    = DRAW_LABELS[drawKey] || drawKey;
+
+  // 連盟Aルール用のウマ詳細行を表示/非表示
+  const umaDetailRow = document.getElementById('rd-uma-detail-row');
+  if (umaDetailRow) {
+    if (umaType === 'rengo_a') {
+      document.getElementById('rd-uma-detail').textContent = RENGO_A_UMA_DETAIL;
+      umaDetailRow.style.display = '';
+    } else {
+      umaDetailRow.style.display = 'none';
+    }
+  }
 
   accordion.style.display = 'block';
   document.getElementById('accordion-content').classList.add('open');

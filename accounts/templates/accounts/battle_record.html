@@ -76,47 +76,118 @@
       <table class="all-table">
         <thead>
           <tr>
-            <th class="col-no" style="position:sticky;left:0px;z-index:2;background:#1a3a6b;width:32px;min-width:32px;max-width:32px;border-right:1px solid #2a5a9b">#</th>
-            <th class="col-name" style="position:sticky;left:32px;z-index:2;background:#1565c0;box-shadow:2px 0 6px rgba(0,0,0,0.25);border-right:1px solid #2a5a9b">選手名</th>
-            <th class="col-num">対戦数</th>
-            <th class="col-pts">ポイント</th>
-            <th class="col-num">平均<br>スコア</th>
-            <th class="col-pct">和了率</th>
-            <th class="col-pct">放銃率</th>
-            <th class="col-pct">立直率</th>
-            <th class="col-pct">副露率</th>
-            <th class="col-pct">参加率</th>
-            <th class="col-num">平均<br>和了</th>
-            <th class="col-num">平均<br>放銃</th>
-            <th class="col-num">平均<br>順位</th>
-            <th class="col-pct">トップ率</th>
-            <th class="col-pct">4着<br>回避率</th>
-            <th class="col-pct">ツモ率</th>
-            <th class="col-pct">ダマ率</th>
-            <th class="col-pct">流局率</th>
-            <th class="col-pct">流局<br>聴牌率</th>
-            <th class="col-pct">立直<br>和了率</th>
-            <th class="col-pct">立直<br>放銃率</th>
-            <th class="col-num">立直<br>収支</th>
-            <th class="col-num">立直<br>収入</th>
-            <th class="col-num">立直<br>支出</th>
-            <th class="col-pct">立直<br>流局率</th>
-            <th class="col-pct">一発率</th>
-            <th class="col-pct">裏ドラ率</th>
-            <th class="col-num">打点<br>効率</th>
-            <th class="col-num">銃点<br>損失</th>
-            <th class="col-num">調整<br>打点効率</th>
-            <th class="col-num">局収支</th>
-            <th class="col-num">総局数</th>
-            <th class="col-dist">着順分布</th>
-            <th class="col-pct">副露<br>和了率</th>
-            <th class="col-pct">副露<br>放銃率</th>
-            <th class="col-num">平均<br>副露回数</th>
-            <th class="col-num">平均<br>ドラ枚数</th>
-            <th class="col-num">平均<br>裏ドラ枚数</th>
-            <th class="col-pct">放銃時<br>裏ドラ率</th>
-            <th class="col-num">放銃時平均<br>ドラ枚数</th>
-            <th class="col-num">放銃時平均<br>裏ドラ枚数</th>
+            <th class="col-no" style="position:sticky;left:0px;z-index:2;background:#1a3a6b;width:32px;min-width:32px;max-width:32px;border-right:1px solid #2a5a9b;box-shadow: 3px -1px 10px 1px #2a6a9b inset">#</th>
+            <th class="col-name" style="position:sticky;left:32px;z-index:2;background:#1565c0;box-shadow: 3px -1px 10px 1px #4595ff inset;border-right:1px solid #2a5a9b">選手名</th>
+            <th class="col-num base">対戦数</th>
+            <th class="col-num base bal_oya"><span class="hov">総局数</span><span class="bal_bot">局数の合計</span></th>
+            <th class="col-pts base bal_oya"><span class="hov">ポイント</span><span class="bal_bot">獲得ptsの合計</span></th>
+            <th class="col-num base bal_oya"><span class="hov">平均<br>スコア</span><span class="bal_bot">獲得ptsの平均</span></th>
+            <th class="col-pct hoka bal_oya"><span class="hov">和了率</span><span class="bal_bot">和了回数 / 総局数</span></th>
+            <th class="col-pct hoka bal_oya"><span class="hov">放銃率</span><span class="bal_bot">放銃回数 / 総局数</span></th>
+            <th class="col-pct hoka bal_oya"><span class="hov">立直率</span><span class="bal_bot">立直回数 / 総局数</span></th>
+            <th class="col-pct hoka bal_oya"><span class="hov">副露率</span><span class="bal_bot">副露回数 / 総局数</span></th>
+            <th class="col-pct hoka bal_oya"><span class="hov">参加率</span><span class="bal_bot">立直率 + 副露率</span></th>
+            <th class="col-num hoka bal_oya"><span class="hov">平均<br>和了</span><span class="bal_bot">和了点の平均（供託含む）</span></th>
+            <th class="col-num hoka bal_oya"><span class="hov">平均<br>放銃</span><span class="bal_bot">放銃点の平均（供託含む）</span></th>
+            <th class="col-num hoka bal_oya"><span class="hov">打点<br>効率</span><span class="bal_bot">和了率 * 平均和了</span></th>
+            <th class="col-num hoka bal_oya"><span class="hov">銃点<br>損失</span><span class="bal_bot">放銃率 * 平均放銃</span></th>
+            <th class="col-num hoka bal_oya"><span class="hov">調整<br>打点効率</span><span class="bal_bot">打点効率 - 銃点損失</span></th>
+            <th class="col-num hoka bal_oya"><span class="hov">局収支</span><span class="bal_bot">1局あたりの平均収支</span></th>
+            <th class="col-num hoka bal_oya"><span class="hov">供託点</span><span class="bal_bot">供託点（積み棒含む）の総収支</span></th>
+
+            <th class="col-pct neta bal_oya"><span class="hov">関与率</span><span class="bal_bot">和了率 + 放銃率</span></th>
+            <th class="col-pct neta bal_oya"><span class="hov">傍観率</span><span class="bal_bot">点箱に触れなかった確率<br>（点数収支0の局率）</span></th>
+            <th class="col-pct neta bal_oya"><span class="hov">オーラス<br>和了率</span><span class="bal_bot">オーラスの和了率</span></th>
+            <th class="col-pct neta bal_oya"><span class="hov">オーラス<br>着順UP率</span><span class="bal_bot">オーラスで着順が上がった確率</span></th>
+            <th class="col-pct neta bal_oya"><span class="hov">マクラ<br>ーレン率</span><span class="bal_bot">オーラスで着順が下がった確率</span></th>
+
+            <th class="col-num tyaku bal_oya"><span class="hov">平均<br>順位</span><span class="bal_bot">着順の平均</span></th>
+            <th class="col-pct tyaku bal_oya"><span class="hov">トップ率</span><span class="bal_bot">1着回数 / 対戦数</span></th>
+            <th class="col-pct tyaku bal_oya"><span class="hov">2着率</span><span class="bal_bot">2着回数 / 対戦数</span></th>
+            <th class="col-pct tyaku bal_oya"><span class="hov">3着率</span><span class="bal_bot">3着回数 / 対戦数</span></th>
+            <th class="col-pct tyaku bal_oya"><span class="hov">4着率</span><span class="bal_bot">4着回数 / 対戦数</span></th>
+            <th class="col-dist tyaku bal_oya"><span class="hov">着順分布</span><span class="bal_bot">1着 - 2着 - 3着 - 4着</span></th>
+            <th class="col-pct tyaku bal_oya"><span class="hov">4着<br>回避率</span><span class="bal_bot">2,3,4着回数 / 対戦数</span></th>
+            <th class="col-pct tyaku bal_oya"><span class="hov">トップ<br>ラス率</span><span class="bal_bot">トップ率 + ラス率</span></th>
+            <th class="col-pct tyaku bal_oya"><span class="hov">モブ率</span><span class="bal_bot">2着率 + 3着率</span></th>
+            <th class="col-pct tyaku bal_oya"><span class="hov">原点<br>超え率</span><span class="bal_bot">終局時持ち点が開始時持ち点以上の確率</span></th>
+
+            <th class="col-pct base bal_oya"><span class="hov">ツモ率</span><span class="bal_bot">ツモ回数 / 和了回数</span></th>
+            <th class="col-pct base bal_oya"><span class="hov">ダマ率</span><span class="bal_bot">門前ダマ和了回数 / 和了回数</span></th>
+            <th class="col-pct base bal_oya"><span class="hov">流局率</span><span class="bal_bot">流局回数 / 総局数</span></th>
+            <th class="col-pct base bal_oya"><span class="hov">流局<br>聴牌率</span><span class="bal_bot">聴牌回数 / 流局回数</span></th>
+            <th class="col-pct base bal_oya"><span class="hov">副露<br>和了率</span><span class="bal_bot">副露時和了回数 / 副露回数</span></th>
+            <th class="col-pct base bal_oya"><span class="hov">副露<br>放銃率</span><span class="bal_bot">副露時放銃回数 / 副露回数</span></th>
+            <th class="col-num base bal_oya"><span class="hov">平均<br>副露回数</span><span class="bal_bot">副露回数合計 / 総局数</span></th>
+
+            <th class="col-pct riichi bal_oya"><span class="hov">立直<br>和了率</span><span class="bal_bot">立直時の和了回数 / 立直回数</span></th>
+            <th class="col-pct riichi bal_oya"><span class="hov">立直<br>放銃率</span><span class="bal_bot">立直時の放銃回数 / 立直回数</span></th>
+            <th class="col-num riichi bal_oya"><span class="hov">立直<br>収支</span><span class="bal_bot">立直時の収支（供託含む）<br>/ 立直回数</span></th>
+            <th class="col-num riichi bal_oya"><span class="hov">立直<br>収入</span><span class="bal_bot">立直和了収入（供託含む）<br>/ 立直和了回数</span></th>
+            <th class="col-num riichi bal_oya"><span class="hov">立直<br>支出</span><span class="bal_bot">立直時放銃支出（供託含む）<br>/ 立直放銃回数</span></th>
+            <th class="col-pct riichi bal_oya"><span class="hov">立直<br>流局率</span><span class="bal_bot">立直時流局回数 / 立直回数</span></th>
+            <th class="col-pct riichi bal_oya"><span class="hov">一発率</span><span class="bal_bot">「一発」の和了回数<br> / 立直和了回数</span></th>
+
+            <th class="col-num dora bal_oya"><span class="hov">平均<br>翻数</span><span class="bal_bot">和了時の翻数平均</span></th>
+            <th class="col-num dora2 bal_oya"><span class="hov">放銃時<br>平均翻数</span><span class="bal_bot">放銃時の翻数平均</span></th>
+            <th class="col-num dora bal_oya"><span class="hov">和了<br>回数</span><span class="bal_bot">和了した回数合計</span></th>
+            <th class="col-num dora2 bal_oya"><span class="hov">放銃<br>回数</span><span class="bal_bot">放銃した回数合計</span></th>
+            <th class="col-num dora bal_oya"><span class="hov">ドラ<br>枚数</span><span class="bal_bot">和了時の表・裏・赤ドラの枚数合計</span></th>
+            <th class="col-num dora bal_oya"><span class="hov">--------<br>表</span><span class="bal_bot">和了時の表ドラの枚数合計</span></th>
+            <th class="col-num dora bal_oya"><span class="hov">--------<br>裏</span><span class="bal_bot">和了時の裏ドラの枚数合計</span></th>
+            <th class="col-num dora bal_oya"><span class="hov">--------<br>赤</span><span class="bal_bot">和了時の赤ドラの枚数合計</span></th>
+            <th class="col-num dora2 bal_oya"><span class="hov">放銃時<br>ドラ枚数</span><span class="bal_bot">放銃時の表・裏・赤ドラの枚数合計</span></th>
+            <th class="col-num dora2 bal_oya"><span class="hov">--------<br>表</span><span class="bal_bot">放銃時の表ドラの枚数合計</span></th>
+            <th class="col-num dora2 bal_oya"><span class="hov">--------<br>裏</span><span class="bal_bot">放銃時の裏ドラの枚数合計</span></th>
+            <th class="col-num dora2 bal_oya"><span class="hov">--------<br>赤</span><span class="bal_bot">放銃時の赤ドラの枚数合計</span></th>
+
+            <th class="col-num dora bal_oya"><span class="hov">平均<br>ドラ枚数</span><span class="bal_bot">和了時の表・裏・赤ドラ枚数平均</span></th>
+            <th class="col-num dora2 bal_oya"><span class="hov">放銃時平均<br>ドラ枚数</span><span class="bal_bot">放銃時の表・裏・赤ドラの枚数平均</span></th>
+            <th class="col-num dora bal_oya"><span class="hov">平均<br>裏ドラ枚数</span><span class="bal_bot">立直和了時の裏ドラ枚数平均</span></th>
+            <th class="col-num dora2 bal_oya"><span class="hov">放銃時平均<br>裏ドラ枚数</span><span class="bal_bot">立直への放銃時の裏ドラ枚数平均</span></th>
+            <th class="col-pct dora bal_oya"><span class="hov">裏ドラ率</span><span class="bal_bot">裏ドラがある和了回数<br> / 立直和了回数</span></th>
+            <th class="col-pct dora2 bal_oya"><span class="hov">放銃時<br>裏ドラ率</span><span class="bal_bot">裏ドラがある放銃回数<br> / 立直への放銃回数</span></th>
+            <th class="col-pct dora bal_oya"><span class="hov">ドラ<br>割合</span><span class="bal_bot">和了時の翻数に占めるドラの割合平均</span></th>
+            <th class="col-pct dora2 bal_oya"><span class="hov">放銃時<br>ドラ割合</span><span class="bal_bot">放銃時の翻数に占めるドラの割合平均</span></th>
+
+            <th class="col-num dora bal_oya"><span class="hov">裏3<br>回数</span><span class="bal_bot">裏ドラが3枚以上の和了回数合計</span></th>
+            <th class="col-num dora2 bal_oya"><span class="hov">裏3<br>放銃回数</span><span class="bal_bot">裏ドラが3枚以上の放銃回数合計</span></th>
+
+            <th class="col-pct yaku bal_oya"><span class="hov">運役<br>和了率</span><span class="bal_bot">「一発」「嶺上開花」「海底摸月」「河底撈魚」<br>「天和」「地和」が和了役に含まれる確率<br>※重複は1でカウント</span></th>
+            <th class="col-pct yaku bal_oya"><span class="hov">染め役<br>和了率</span><span class="bal_bot">「混一色」「清一色」「緑一色」「字一色」<br>「九蓮宝燈」が和了役に含まれる確率<br>※重複は1でカウント</span></th>
+            <th class="col-pct yaku bal_oya"><span class="hov">門前役<br>和了率</span><span class="bal_bot">門前限定役が和了役に含まれる確率<br>※重複は1でカウント<br>門前で和了したかは問わない</span></th>
+            <th class="col-pct yaku bal_oya"><span class="hov">端っこ役<br>和了率</span><span class="bal_bot">「混全帯么九」「混老頭」「純全帯么九」「字一色」<br>「清老頭」「国士無双」「国士無双十三面待ち」<br>が和了役に含まれる確率</span></th>
+            <th class="col-pct yaku bal_oya"><span class="hov">真ん中役<br>和了率</span><span class="bal_bot">「断么九」が和了役に含まれる確率</span></th>
+            <th class="col-pct yaku bal_oya"><span class="hov">役牌系役<br>和了率</span><span class="bal_bot">「役牌 白」「役牌 發」「役牌 中」「役牌 自風牌」<br>「役牌 場風牌」「小三元」「大三元」「字一色」<br>「小四喜」「大四喜」が和了役に含まれる確率<br>※重複は1でカウント</span></th>
+            <th class="col-pct yaku bal_oya"><span class="hov">1翻役<br>和了率</span><span class="bal_bot">1翻役が和了役に含まれる確率<br>※重複は1でカウント</span></th>
+            <th class="col-pct yaku bal_oya"><span class="hov">2翻役<br>和了率</span><span class="bal_bot">2翻役が和了役に含まれる確率<br>※重複は1でカウント</span></th>
+            <th class="col-pct yaku bal_oya"><span class="hov">3翻役<br>和了率</span><span class="bal_bot">3翻役が和了役に含まれる確率<br>※重複は1でカウント</span></th>
+            <th class="col-pct yaku bal_oya"><span class="hov">6翻役<br>和了率</span><span class="bal_bot">6翻役が和了役に含まれる確率<br>※重複は1でカウント</span></th>
+            <th class="col-pct yaku bal_oya"><span class="hov">役満<br>和了率</span><span class="bal_bot">役満が和了役に含まれる確率<br>※重複は1でカウント</span></th>
+            <th class="col-pct yaku bal_oya"><span class="hov">役複合率</span><span class="bal_bot">和了時、役が2つ以上複合している確率<br>※ドラは役に含まない</span></th>
+
+            <th class="col-pct yaku2 bal_oya"><span class="hov">1翻率</span><span class="bal_bot">全和了のうち1翻の確率</span></th>
+            <th class="col-pct yaku2 bal_oya"><span class="hov">2翻率</span><span class="bal_bot">全和了のうち2翻の確率</span></th>
+            <th class="col-pct yaku2 bal_oya"><span class="hov">3翻率</span><span class="bal_bot">全和了のうち3翻の確率</span></th>
+            <th class="col-pct yaku2 bal_oya"><span class="hov">4翻率</span><span class="bal_bot">全和了のうち4翻の確率</span></th>
+            <th class="col-pct yaku2 bal_oya"><span class="hov">5翻率</span><span class="bal_bot">全和了のうち5翻の確率</span></th>
+            <th class="col-pct yaku2 bal_oya"><span class="hov">満貫率</span><span class="bal_bot">全和了のうち満貫の確率</span></th>
+            <th class="col-pct yaku2 bal_oya"><span class="hov">跳満率</span><span class="bal_bot">全和了のうち跳満の確率</span></th>
+            <th class="col-pct yaku2 bal_oya"><span class="hov">倍満率</span><span class="bal_bot">全和了のうち倍満の確率</span></th>
+            <th class="col-pct yaku2 bal_oya"><span class="hov">三倍満率</span><span class="bal_bot">全和了のうち三倍満の確率</span></th>
+            <th class="col-pct yaku2 bal_oya"><span class="hov">役満率</span><span class="bal_bot">全和了のうち役満の確率</span></th>
+
+            <th class="col-pct neta bal_oya"><span class="hov">セレブ率</span><span class="bal_bot">全和了のうち満貫以上の確率</span></th>
+            <th class="col-pct neta bal_oya"><span class="hov">小林立</span><span class="bal_bot">咲の作者<br>※全和了のうち1000or1500の確率</span></th>
+            <th class="col-pct neta bal_oya"><span class="hov">ハギー率</span><span class="bal_bot">「三色同順」が和了役に含まれる確率</span></th>
+            <th class="col-pct neta bal_oya"><span class="hov">咲率</span><span class="bal_bot">「嶺上開花」が和了役に含まれる確率</span></th>
+            <th class="col-pct neta bal_oya"><span class="hov">タコス率</span><span class="bal_bot">開局（東1局0本場）の和了率</span></th>
+            <th class="col-pct neta bal_oya"><span class="hov">天江衣率</span><span class="bal_bot">「海底摸月」が和了役に含まれる確率</span></th>
+            <th class="col-pct neta bal_oya"><span class="hov">亦野誠子率</span><span class="bal_bot">全和了のうち3副露して和了した確率</span></th>
+            <th class="col-pct neta bal_oya"><span class="hov">園城寺怜率</span><span class="bal_bot">全和了のうち「立直」「一発」「門前清自摸和」<br>が全て複合している確率</span></th>
+            <th class="col-pct neta bal_oya"><span class="hov">鳴いたら<br>降りるな率</span><span class="bal_bot">副露後に和了or放銃or流局聴牌した確率</span></th>
+            <th class="col-pct neta bal_oya"><span class="hov">リーのみ率</span><span class="bal_bot">全和了のうち役が「立直」のみの確率<br>※ドラの有無は問わない</span></th>
+            <th class="col-num neta bal_oya"><span class="hov">魂天力</span><span class="bal_bot">雀聖3玉の間での着順による点数期待値<br>※(1着回数 * 70) + (2着回数 * 35) +<br>(3着回数 * -5) + (4着回数 * -145)</span></th>
           </tr>
         </thead>
         <tbody>
@@ -128,53 +199,121 @@
                  class="player-link">{{ s.user.username }}</a>
             </td>
             <td class="td-right">{{ s.battle_count }}</td>
+            <td class="td-right">{{ s.total_kyoku }}</td>
             <td class="td-right {% if s.total_pts is not None %}{% if s.total_pts >= 0 %}pts-pos{% else %}pts-neg{% endif %}{% endif %}" style="font-weight:700">
               {% if s.total_pts is not None %}
                 {% if s.total_pts >= 0 %}+{{ s.total_pts|floatformat:1 }}{% else %}▲{{ s.total_pts|floatformat:1|slice:"1:" }}{% endif %}
               {% else %}—{% endif %}
             </td>
-            <td class="td-right">{% if s.avg_score is not None %}{{ s.avg_score|floatformat:2 }}{% else %}—{% endif %}</td>
-            <td class="td-right {% if s.agari_rate >= 24 %}hi{% elif s.agari_rate <= 20 %}lo{% endif %}">{{ s.agari_rate|floatformat:2 }}%</td>
-            <td class="td-right {% if s.houjuu_rate >= 15 %}lo{% elif s.houjuu_rate <= 11 %}hi{% endif %}">{{ s.houjuu_rate|floatformat:2 }}%</td>
-            <td class="td-right {% if s.riichi_rate >= 21 %}hi{% elif s.riichi_rate <= 17 %}lo{% endif %}">{{ s.riichi_rate|floatformat:2 }}%</td>
-            <td class="td-right {% if s.furo_rate >= 34 %}hi{% elif s.furo_rate <= 28 %}lo{% endif %}">{{ s.furo_rate|floatformat:2 }}%</td>
-            <td class="td-right {% if s.sanka_rate >= 55 %}hi{% elif s.sanka_rate <= 45 %}lo{% endif %}">{{ s.sanka_rate|floatformat:2 }}%</td>
-            <td class="td-right {% if s.agari_income >= 6800 %}hi{% elif s.agari_income <= 6300 %}lo{% endif %}">{{ s.agari_income }}</td>
-            <td class="td-right {% if s.houjuu_loss >= 5900 %}lo{% elif s.houjuu_loss <= 5400 %}hi{% endif %}">{{ s.houjuu_loss }}</td>
-            <td class="td-right {% if s.avg_rank and s.avg_rank <= 2.3 %}hi{% elif s.avg_rank and s.avg_rank >= 2.7 %}lo{% endif %}">
-              {% if s.avg_rank %}{{ s.avg_rank|floatformat:2 }}{% else %}—{% endif %}
-            </td>
-            <td class="td-right {% if s.top_rate >= 33 %}hi{% elif s.top_rate <= 20 %}lo{% endif %}">{{ s.top_rate|floatformat:2 }}%</td>
-            <td class="td-right {% if s.avoid4_rate >= 85 %}hi{% elif s.avoid4_rate <= 65 %}lo{% endif %}">{{ s.avoid4_rate|floatformat:2 }}%</td>
-            <td class="td-right">{{ s.tsumo_rate|floatformat:2 }}%</td>
-            <td class="td-right">{{ s.dama_rate|floatformat:2 }}%</td>
-            <td class="td-right">{{ s.ryukyoku_rate|floatformat:2 }}%</td>
-            <td class="td-right">{{ s.tenpai_rate|floatformat:2 }}%</td>
-            <td class="td-right {% if s.riichi_agari_rate >= 54 %}hi{% elif s.riichi_agari_rate <= 46 %}lo{% endif %}">{{ s.riichi_agari_rate|floatformat:2 }}%</td>
-            <td class="td-right {% if s.riichi_houjuu_rate >= 13 %}lo{% elif s.riichi_houjuu_rate <= 7 %}hi{% endif %}">{{ s.riichi_houjuu_rate|floatformat:2 }}%</td>
-            <td class="td-right {% if s.riichi_balance >= 3300 %}hi{% elif s.riichi_balance <= 2600 %}lo{% endif %}">{{ s.riichi_balance }}</td>
-            <td class="td-right {% if s.riichi_income >= 8400 %}hi{% elif s.riichi_income <= 7700 %}lo{% endif %}">{{ s.riichi_income }}</td>
-            <td class="td-right {% if s.riichi_loss >= 7300 %}lo{% elif s.riichi_loss <= 6700 %}hi{% endif %}">{{ s.riichi_loss }}</td>
-            <td class="td-right">{{ s.riichi_ryukyoku_rate|floatformat:2 }}%</td>
-            <td class="td-right {% if s.ippatsu_rate >= 25 %}hi{% elif s.ippatsu_rate <= 15 %}lo{% endif %}">{{ s.ippatsu_rate|floatformat:2 }}%</td>
-            <td class="td-right {% if s.ura_rate >= 35 %}hi{% elif s.ura_rate <= 25 %}lo{% endif %}">{{ s.ura_rate|floatformat:2 }}%</td>
-            <td class="td-right {% if s.daten_efficiency >= 1500 %}hi{% elif s.daten_efficiency <= 1300 %}lo{% endif %}">{{ s.daten_efficiency }}</td>
-            <td class="td-right {% if s.juten_loss >= 900 %}lo{% elif s.juten_loss <= 600 %}hi{% endif %}">{{ s.juten_loss }}</td>
-            <td class="td-right {% if s.adjusted_efficiency >= 900 %}hi{% elif s.adjusted_efficiency <= 400 %}lo{% endif %}">{{ s.adjusted_efficiency }}</td>
-            <td class="td-right {% if s.kyoku_balance_avg >= 200 %}hi{% elif s.kyoku_balance_avg <= -200 %}lo{% endif %}">{{ s.kyoku_balance_avg }}</td>
-            <td class="td-right">{{ s.total_kyoku }}</td>
+            <td class="td-right">{% if s.avg_score is not None %}<span class="{{ s.cls_avg_score }}">{{ s.avg_score|floatformat:2 }}</span>{% else %}—{% endif %}</td>
+            <td class="td-right"><span class="{{ s.cls_agari_rate }}">{{ s.agari_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_houjuu_rate }}">{{ s.houjuu_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_riichi_rate }}">{{ s.riichi_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_furo_rate }}">{{ s.furo_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_sanka_rate }}">{{ s.sanka_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_agari_income }}">{{ s.agari_income }}</span></td>
+            <td class="td-right"><span class="{{ s.cls_houjuu_loss }}">{{ s.houjuu_loss }}</span></td>
+            <td class="td-right"><span class="{{ s.cls_daten_efficiency }}">{{ s.daten_efficiency }}</span></td>
+            <td class="td-right"><span class="{{ s.cls_juten_loss }}">{{ s.juten_loss }}</span></td>
+            <td class="td-right"><span class="{{ s.cls_adjusted_efficiency }}">{{ s.adjusted_efficiency }}</span></td>
+            <td class="td-right"><span class="{{ s.cls_kyoku_balance_avg }}">{{ s.kyoku_balance_avg }}</span></td>
+            <td class="td-right"><span class="{{ s.cls_kyotaku_total }}">{{ s.kyotaku_total }}</span></td>
+
+            <td class="td-right"><span class="{{ s.cls_kanyo_rate }}">{{ s.kanyo_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_boukan_rate }}">{{ s.boukan_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_oorasu_agari_rate }}">{{ s.oorasu_agari_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_oorasu_rankup_rate }}">{{ s.oorasu_rankup_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_maclaren_rate }}">{{ s.maclaren_rate|floatformat:2 }}%</span></td>
+
+            <td class="td-right"><span class="{{ s.cls_avg_rank }}">{% if s.avg_rank %}{{ s.avg_rank|floatformat:2 }}{% else %}—{% endif %}</span></td>
+            <td class="td-right"><span class="{{ s.cls_top_rate }}">{{ s.top_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_second_rate }}">{{ s.second_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_third_rate }}">{{ s.third_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_forth_rate }}">{{ s.forth_rate|floatformat:2 }}%</span></td>
             <td class="td-dist">{{ s.rank_dist }}</td>
-            <td class="td-right">{{ s.furo_agari_rate|floatformat:2 }}%</td>
-            <td class="td-right">{{ s.furo_houjuu_rate|floatformat:2 }}%</td>
-            <td class="td-right">{{ s.furo_avg|floatformat:2 }}</td>
-            <td class="td-right">{{ s.all_dora_avg|floatformat:2 }}</td>
-            <td class="td-right">{{ s.ura_dora_avg|floatformat:2 }}</td>
-            <td class="td-right">{{ s.houjuu_ura_rate|floatformat:2 }}%</td>
-            <td class="td-right">{{ s.houjuu_all_dora_avg|floatformat:2 }}</td>
-            <td class="td-right">{{ s.houjuu_ura_dora_avg|floatformat:2 }}</td>
+            <td class="td-right"><span class="{{ s.cls_avoid4_rate }}">{{ s.avoid4_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_top_last_rate }}">{{ s.top_last_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_mob_rate }}">{{ s.mob_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_genten_chouka_rate }}">{{ s.genten_chouka_rate|floatformat:2 }}%</span></td>
+
+            <td class="td-right"><span class="{{ s.cls_tsumo_rate }}">{{ s.tsumo_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_dama_rate }}">{{ s.dama_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_ryukyoku_rate }}">{{ s.ryukyoku_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_tenpai_rate }}">{{ s.tenpai_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_furo_agari_rate }}">{{ s.furo_agari_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_furo_houjuu_rate }}">{{ s.furo_houjuu_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_furo_avg }}">{{ s.furo_avg|floatformat:2 }}</span></td>
+
+            <td class="td-right"><span class="{{ s.cls_riichi_agari_rate }}">{{ s.riichi_agari_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_riichi_houjuu_rate }}">{{ s.riichi_houjuu_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_riichi_balance }}">{{ s.riichi_balance }}</span></td>
+            <td class="td-right"><span class="{{ s.cls_riichi_income }}">{{ s.riichi_income }}</span></td>
+            <td class="td-right"><span class="{{ s.cls_riichi_loss }}">{{ s.riichi_loss }}</span></td>
+            <td class="td-right"><span class="{{ s.cls_riichi_ryukyoku_rate }}">{{ s.riichi_ryukyoku_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_ippatsu_rate }}">{{ s.ippatsu_rate|floatformat:2 }}%</span></td>
+
+            <td class="td-right"><span class="{{ s.cls_avg_han }}">{{ s.avg_han|floatformat:2 }}</span></td>
+            <td class="td-right"><span class="{{ s.cls_houjuu_avg_han }}">{{ s.houjuu_avg_han|floatformat:2 }}</span></td>
+            <td class="td-right"><span class="{{ s.cls_agari_count }}">{{ s.agari_count }}</span></td>
+            <td class="td-right"><span class="{{ s.cls_houjuu_count }}">{{ s.houjuu_count }}</span></td>
+            <td class="td-right"><span class="{{ s.cls_dora_total }}">{{ s.dora_total }}</span></td>
+            <td class="td-right"><span class="{{ s.cls_dora_omote_total }}">{{ s.dora_omote_total }}</span></td>
+            <td class="td-right"><span class="{{ s.cls_dora_ura_total }}">{{ s.dora_ura_total }}</span></td>
+            <td class="td-right"><span class="{{ s.cls_dora_aka_total }}">{{ s.dora_aka_total }}</span></td>
+            <td class="td-right"><span class="{{ s.cls_houjuu_dora_total }}">{{ s.houjuu_dora_total }}</span></td>
+            <td class="td-right"><span class="{{ s.cls_houjuu_dora_omote_total }}">{{ s.houjuu_dora_omote_total }}</span></td>
+            <td class="td-right"><span class="{{ s.cls_houjuu_dora_ura_total }}">{{ s.houjuu_dora_ura_total }}</span></td>
+            <td class="td-right"><span class="{{ s.cls_houjuu_dora_aka_total }}">{{ s.houjuu_dora_aka_total }}</span></td>
+
+            <td class="td-right"><span class="{{ s.cls_all_dora_avg }}">{{ s.all_dora_avg|floatformat:2 }}</span></td>
+            <td class="td-right"><span class="{{ s.cls_houjuu_all_dora_avg }}">{{ s.houjuu_all_dora_avg|floatformat:2 }}</span></td>
+            <td class="td-right"><span class="{{ s.cls_ura_dora_avg }}">{{ s.ura_dora_avg|floatformat:2 }}</span></td>
+            <td class="td-right"><span class="{{ s.cls_houjuu_ura_dora_avg }}">{{ s.houjuu_ura_dora_avg|floatformat:2 }}</span></td>
+            <td class="td-right"><span class="{{ s.cls_ura_rate }}">{{ s.ura_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_houjuu_ura_rate }}">{{ s.houjuu_ura_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_dora_ratio }}">{{ s.dora_ratio|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_houjuu_dora_ratio }}">{{ s.houjuu_dora_ratio|floatformat:2 }}%</span></td>
+
+            <td class="td-right"><span class="{{ s.cls_ura3_count }}">{{ s.ura3_count }}</span></td>
+            <td class="td-right"><span class="{{ s.cls_ura3_houjuu_count }}">{{ s.ura3_houjuu_count }}</span></td>
+
+            <td class="td-right"><span class="{{ s.cls_luck_yaku_rate }}">{{ s.luck_yaku_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_flush_yaku_rate }}">{{ s.flush_yaku_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_menzen_yaku_rate }}">{{ s.menzen_yaku_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_terminal_yaku_rate }}">{{ s.terminal_yaku_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_tanyao_rate }}">{{ s.tanyao_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_yakuhai_rate }}">{{ s.yakuhai_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_han1_yaku_rate }}">{{ s.han1_yaku_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_han2_yaku_rate }}">{{ s.han2_yaku_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_han3_yaku_rate }}">{{ s.han3_yaku_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_han6_yaku_rate }}">{{ s.han6_yaku_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_yakuman_yaku_rate }}">{{ s.yakuman_yaku_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_fukugou_rate }}">{{ s.fukugou_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_han1_rate }}">{{ s.han1_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_han2_rate }}">{{ s.han2_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_han3_rate }}">{{ s.han3_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_han4_rate }}">{{ s.han4_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_han5_rate }}">{{ s.han5_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_mangan_rate }}">{{ s.mangan_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_haneman_rate }}">{{ s.haneman_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_baiman_rate }}">{{ s.baiman_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_sanbaiman_rate }}">{{ s.sanbaiman_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_yakuman_rate }}">{{ s.yakuman_rate|floatformat:2 }}%</span></td>
+
+            <td class="td-right"><span class="{{ s.cls_kurosawa_rate }}">{{ s.kurosawa_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_kobayashi_rate }}">{{ s.kobayashi_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_haggy_rate }}">{{ s.haggy_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_saki_rate }}">{{ s.saki_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_tacos_rate }}">{{ s.tacos_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_ama_e_rate }}">{{ s.ama_e_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_matano_rate }}">{{ s.matano_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_onjouji_rate }}">{{ s.onjouji_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_naitara_rate }}">{{ s.naitara_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_ri_nomi_rate }}">{{ s.ri_nomi_rate|floatformat:2 }}%</span></td>
+            <td class="td-right"><span class="{{ s.cls_tamashii_power }}">{{ s.tamashii_power }}</span></td>
           </tr>
           {% empty %}
-          <tr><td colspan="33" style="text-align:center;padding:24px;color:var(--ink-muted)">対象ユーザのデータがありません。</td></tr>
+          <tr><td colspan="99" style="text-align:center;padding:24px;color:var(--ink-muted)">対象ユーザのデータがありません。</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -234,7 +373,7 @@
           <dt>総局数</dt><dd>{{ stats.total_kyoku }} 局</dd>
           {% if stats.total_pts is not None %}
           <dt>獲得合計pts</dt>
-          <dd class="{% if stats.total_pts >= 0 %}pts-pos{% else %}pts-neg{% endif %}" style="font-weight:700;font-family:var(--mono)">
+          <dd class="{% if stats.total_pts >= 0 %}pts-pos{% else %}pts-neg{% endif %}" style="font-weight:700;font-family:var(--sans)">
             {% if stats.total_pts >= 0 %}+{{ stats.total_pts|floatformat:1 }}{% else %}▲{{ stats.total_pts|floatformat:1|slice:"1:" }}{% endif %} pts
           </dd>
           {% endif %}
@@ -255,7 +394,7 @@
 .stat-card-title { font-weight:700; font-size:14px; margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid var(--border); }
 .stat-dl { display:grid; grid-template-columns:1fr auto; gap:6px 16px; align-items:baseline; }
 .stat-dl dt { font-size:12px; color:var(--ink-muted); }
-.stat-dl dd { font-family:var(--mono); font-size:13px; font-weight:700; text-align:right; }
+.stat-dl dd { font-family:var(--sans); font-size:13px; font-weight:700; text-align:right; }
 
 /* All Players テーブルラッパー */
 .all-table-wrapper {
@@ -276,35 +415,80 @@
   box-shadow:var(--shadow);
 }
 .all-table thead tr {
-  background:linear-gradient(135deg, #1a3a6b 0%, #1565c0 60%, #1976d2 100%);
+  background:#006400;
   color:white;
+  box-shadow: 3px -1px 10px 1px #309430 inset;
+}
+.all-table thead tr .base {
+  background:#6a5acd;
+  color:white;
+  box-shadow: 3px -1px 10px 1px #9a8aff inset;
+}
+.all-table thead tr .tyaku {
+  background:#dc143c;
+  color:white;
+  box-shadow: 3px -1px 10px 1px #ff446c inset;
+}
+.all-table thead tr .riichi {
+  background:#ff8c00;
+  color:white;
+  box-shadow: 3px -1px 10px 1px #ffbc30 inset;
+}
+.all-table thead tr .hoka {
+  background:#ffcc99;
+  color:black;
+  box-shadow: 3px -1px 16px 6px #ffdcd9 inset;
+}
+.all-table thead tr .dora {
+  background:#8989ff;
+  color:white;
+  box-shadow: 3px -1px 10px 1px #b9b9ff inset;
+}
+.all-table thead tr .dora2 {
+  background:#ff8989;
+  color:white;
+  box-shadow: 3px -1px 10px 1px #ffb9b9 inset;
+}
+.all-table thead tr .yaku {
+  background:#008080;
+  color:white;
+  box-shadow: 3px -1px 10px 1px #30b0b0 inset;
+}
+.all-table thead tr .yaku2 {
+  background:#228b22;
+  color:white;
+  box-shadow: 3px -1px 10px 1px #52cb52 inset;
+}
+.all-table thead tr .neta {
+  background:#6495ed;
+  color:white;
+  box-shadow: 3px -1px 10px 1px #94c5ff inset;
 }
 .all-table th {
   padding:6px 8px;
   text-align:center;
   font-size:11px;
-  font-family:var(--mono);
+  font-family:var(--sans);
   letter-spacing:0.04em;
-  border-top:1px solid #333;
-  border-right:1px solid #333;
-  border-bottom:1px solid #333;
+  border-right:1px solid #e0e0e0;
   line-height:1.3;
   vertical-align:middle;
 }
 .all-table th:first-child { border-left:1px solid #333; }
 .all-table td {
-  padding:5px 8px;
+  padding:8px 8px;
   border-top:1px solid #e0e0e0;
   border-right:1px solid #e0e0e0;
   border-bottom:none;
   vertical-align:middle;
-  font-size:13px;
+  font-size:14px;
+  font-weight: 500;
 }
 .all-table tr:last-child td { border-bottom:1px solid #e0e0e0; }
 .all-table td:first-child { border-left:1px solid #e0e0e0; }
-.tr-odd  { background:pink; }
-.tr-even { background:paleturquoise; }
-.all-table tbody tr:hover { background:#e8f5e9 !important; }
+.tr-odd  { background:#fff; }
+.tr-even { background:#eee; }
+/* .all-table tbody tr:hover { background:#e8f5e9 !important; } */
 
 .col-no   { width:32px; min-width:32px; max-width:32px; position:sticky; left:0px; z-index:1; background:inherit; }
 .col-name { min-width:90px; position:sticky; left:32px; z-index:1; background:inherit; box-shadow:2px 0 4px rgba(0,0,0,0.08); }
@@ -313,13 +497,13 @@
 .col-pct  { min-width:58px; }
 .col-dist { min-width:130px; }
 
-.td-center { text-align:center; font-family:var(--mono); font-weight:700; }
-.td-right  { text-align:right;  font-family:var(--mono); }
-.td-dist   { text-align:center; font-family:var(--mono); font-size:12px; }
+.td-center { text-align:center; font-family:var(--sans); font-weight:700; }
+.td-right  { text-align:right;  font-family:var(--sans); }
+.td-dist   { text-align:center; font-family:var(--sans); font-size:14px; }
 
 /* ハイライト */
-.hi { color:#1565c0; font-weight:700; }
-.lo { color:#c62828; font-weight:700; }
+.hi { color:#1565c0; font-weight:700 !important; }
+.lo { color:#c62828; font-weight:700 !important; }
 
 .player-link {
   color:var(--ink);
@@ -367,13 +551,12 @@
 .bal_bot {
   position: absolute;
   display: none;
-  margin-right: calc(0% - 80px);
   padding: 7px 10px;
-  min-width: 120px;
+  min-width: 100px;
   color: white;
   background: rgba(0, 0, 0, 0.60);
-  left : -5%;
-  top : 100%;
+  transform: translateX(-50%);
+  top : 80%;
   margin-top : 12px;
   font-size: 90%;
   border-radius: 5px;
@@ -385,7 +568,8 @@
   border-left: 10px solid transparent;
   border-right: 10px solid transparent;
   top: -12px;
-  left : 5%;
+  left : 40%;
+  transform: translateX(-50%);
   content: "";
   position: absolute;
 }

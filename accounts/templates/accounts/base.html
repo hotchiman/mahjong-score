@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}麻雀対局管理{% endblock %} — MJS</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Fira+Code:wght@400;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -28,7 +28,7 @@
       --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.04);
       --shadow-lg: 0 2px 8px rgba(0,0,0,0.1), 0 16px 48px rgba(0,0,0,0.08);
       --radius: 2px;
-      --mono: 'Space Mono', monospace;
+      --mono: 'Fira Code', monospace;
       --sans: 'Noto Sans JP', sans-serif;
     }
 
@@ -155,8 +155,20 @@
     .danger-zone p { color: var(--ink-soft); font-size: 13px; margin-bottom: 20px; }
 
     /* ── Invite copy area ── */
-    .invite-box { display: flex; gap: 8px; align-items: center; background: var(--paper-warm); border: 1px solid var(--border); padding: 10px 14px; border-radius: var(--radius); }
-    .invite-url { font-family: var(--mono); font-size: 11px; color: var(--ink-soft); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .invite-box { display: flex; gap: 8px; align-items: center; background: var(--paper-warm); border: 1px solid var(--border); padding: 10px 14px; border-radius: var(--radius); max-width: 100%; overflow: hidden; -webkit-overflow-scrolling: touch; }
+    .invite-url { font-family: var(--mono); font-size: 11px; color: var(--ink-soft); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ── Responsive ── */
+    .table-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .two-col-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+
+    @media (max-width: 768px) {
+      html, body { overflow-x: hidden; }
+      .page-main { padding: 20px 14px; max-width: 100%; }
+      .topbar { padding: 0 14px; }
+      .two-col-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+      .card { padding: 18px 16px; max-width: 100% !important; }
+    }
   </style>
 </head>
 <body>

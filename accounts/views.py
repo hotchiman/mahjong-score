@@ -6,6 +6,7 @@ from django.contrib import messages
 from django.db.models import Q, Avg, Sum, Count
 from django.db import transaction
 from decimal import Decimal, ROUND_HALF_UP
+from collections import defaultdict
 import json
 
 from .models import (
@@ -16,6 +17,62 @@ from .models import (
 
 SEATS = ['east', 'south', 'west', 'north']
 SEAT_LABEL = {'east': '起家', 'south': '南家', 'west': '西家', 'north': '北家'}
+
+# ── 対戦記録：役グループ定義 ──────────────────────────
+YAKU_LUCK      = ['一発', '嶺上開花', '海底摸月', '河底撈魚', '天和', '地和']
+YAKU_FLUSH     = ['混一色', '清一色', '緑一色', '字一色', '九蓮宝燈']
+YAKU_MENZEN    = [
+    '門前清自摸和', '立直', '一盃口', '平和', 'ダブル立直', '七対子', '二盃口', '一発',
+    '天和', '地和', '四暗刻', '国士無双', '九蓮宝燈', '純正九蓮宝燈',
+    '四暗刻単騎', '国士無双十三面待ち',
+]
+YAKU_TERMINAL  = ['混全帯么九', '混老頭', '純全帯么九', '字一色', '清老頭', '国士無双', '国士無双十三面待ち']
+YAKU_TANYAO    = ['断么九']
+YAKU_YAKUHAI   = [
+    '役牌 白', '役牌 發', '役牌 中', '役牌 自風牌', '役牌 場風牌',
+    '小三元', '大三元', '字一色', '小四喜', '大四喜',
+]
+YAKU_HAN1 = ['門前清自摸和', '立直', '搶槓', '嶺上開花', '海底摸月', '河底撈魚',
+             '役牌 白', '役牌 發', '役牌 中', '役牌 自風牌', '役牌 場風牌',
+             '断么九', '一盃口', '平和', '一発']
+YAKU_HAN2 = ['混全帯么九', '一気通貫', '三色同順', 'ダブル立直', '三色同刻',
+             '三槓子', '対々和', '三暗刻', '小三元', '混老頭', '七対子']
+YAKU_HAN3 = ['純全帯么九', '混一色', '二盃口']
+YAKU_HAN6 = ['清一色']
+YAKU_YAKUMAN = ['天和', '地和', '大三元', '四暗刻', '字一色', '緑一色', '清老頭',
+                '国士無双', '小四喜', '四槓子', '九蓮宝燈', '純正九蓮宝燈',
+                '四暗刻単騎', '国士無双十三面待ち', '大四喜']
+
+
+def _calc_point_rank_map(points, draw_handling):
+    """
+    持ち点(dict: seat->int) と同点の扱いから、各座席の着順(1〜4)を返す。
+    JS版 calcRankMap と同じロジック。
+    """
+    sorted_seats = sorted(SEATS, key=lambda s: (-points[s], SEATS.index(s)))
+    tmp = {s: i + 1 for i, s in enumerate(sorted_seats)}
+    if draw_handling == 'east_priority':
+        return tmp
+    rank_map = {}
+    done = set()
+    for seat in SEATS:
+        if seat in done:
+            continue
+        same = [s for s in SEATS if points[s] == points[seat]]
+        top_rank = min(tmp[s] for s in same)
+        for s in same:
+            rank_map[s] = top_rank
+            done.add(s)
+    return rank_map
+
+
+def _get_oya_seat(round_master_name):
+    """局名（例：「東1」「南3」）の末尾数字から起家(東家)を基準とした親の座席を返す"""
+    try:
+        num = int(round_master_name[-1])
+    except (ValueError, IndexError):
+        return None
+    return SEATS[(num - 1) % 4]
 
 
 # ── デコレータ ──────────────────────────────────────
@@ -40,10 +97,16 @@ def calc_pts_with_rule(last_points, seat_users, rule):
     D = Decimal
     init_pts   = D(rule.init_points)
     return_pts = D(rule.return_points)
-    uma        = [D(rule.uma1), D(rule.uma2), D(rule.uma3), D(rule.uma4)]
     draw_mode  = rule.draw_handling  # 'split_east' | 'split' | 'east_priority'
 
-    pts_raw  = {seat: D(last_points[seat]) for seat in SEATS}
+    pts_raw = {seat: D(last_points[seat]) for seat in SEATS}
+
+    # ── 連盟Aルール（浮き人数連動ウマ）────────────────
+    if rule.uma_type == 'rengo_a':
+        return _calc_pts_rengo_a(pts_raw, return_pts, draw_mode)
+
+    # ── 通常固定ウマ ─────────────────────────────────
+    uma = [D(rule.uma1), D(rule.uma2), D(rule.uma3), D(rule.uma4)]
 
     # ① 起家優先で仮着順を決める
     def seat_priority(seat): return SEATS.index(seat)
@@ -99,19 +162,147 @@ def calc_pts_with_rule(last_points, seat_users, rule):
 
             else:  # split_east
                 # 0.1 pt 単位の商とあまりを起家優先で加算
+                # 端数は起家に最も近い1人に集約（3n+1 → +0.1、3n+2 → +0.2）
                 unit = D('0.1')
                 quotient = int(total_pts / unit) // count  # 小数第一位まで商
                 remainder = int(total_pts / unit) - quotient * count  # あまり（0.1 pts 単位）
                 # 座席順（起家優先）でグループを並べる
                 same_sorted = sorted(same, key=lambda s: SEATS.index(s))
                 for idx, s in enumerate(same_sorted):
-                    extra = unit if idx < remainder else D('0')
+                    extra = unit * remainder if idx == 0 else D('0')
                     result[s] = {'rank': top_rank, 'pts': D(quotient) * unit + extra}
 
             done.update(same)
     else:
         for rank, seat in enumerate(ranked, 1):
             result[seat] = {'rank': rank, 'pts': base_pts(seat, rank).quantize(D('0.1'), rounding=ROUND_HALF_UP)}
+
+    return result
+
+
+def _calc_pts_rengo_a(pts_raw, return_pts, draw_mode):
+    """
+    連盟Aルール専用のpts計算。
+    - 浮き（最終持ち点 >= 返し点）の人数でウマテーブルを切り替え
+    - 同点処理は draw_mode='split' に準拠
+    """
+    from .models import RENGO_A_UMA_TABLE
+    D = Decimal
+
+    # 浮き人数カウント（返し点以上 = 浮き）
+    float_count = sum(1 for s in SEATS if pts_raw[s] >= return_pts)
+
+    uma = [D(v) for v in RENGO_A_UMA_TABLE[float_count]]
+
+    # 起家優先で仮着順を決める
+    def seat_priority(seat): return SEATS.index(seat)
+    ranked = sorted(SEATS, key=lambda s: (-pts_raw[s], seat_priority(s)))
+
+    def base_pts(seat, rank):
+        # 連盟Aルール: 返し点 = 初期点なので1着ボーナスは発生しない
+        return (pts_raw[seat] - return_pts) / 1000 + uma[rank - 1]
+
+    # 仮pts計算
+    tmp = {}
+    for rank, seat in enumerate(ranked, 1):
+        tmp[seat] = {'rank': rank, 'pts': base_pts(seat, rank)}
+
+    # 同点グループを split（均等分け）で処理
+    result = {}
+    done = set()
+    for seat in SEATS:
+        if seat in done:
+            continue
+        same = [s for s in SEATS if pts_raw[s] == pts_raw[seat]]
+        if len(same) == 1:
+            result[seat] = {
+                'rank': tmp[seat]['rank'],
+                'pts': tmp[seat]['pts'].quantize(D('0.1'), rounding=ROUND_HALF_UP)
+            }
+            done.add(seat)
+            continue
+
+        top_rank  = min(tmp[s]['rank'] for s in same)
+        total_pts = sum(tmp[s]['pts'] for s in same)
+        count     = len(same)
+        avg = (total_pts / count).quantize(D('0.1'), rounding=ROUND_HALF_UP)
+        for s in same:
+            result[s] = {'rank': top_rank, 'pts': avg}
+        done.update(same)
+
+    return result
+
+
+def apply_zankyo(calc, zankyo, kyotaku_handling, seat_users):
+    """
+    残供託を calc（calc_pts_with_rule の戻り値）に加算して返す。
+    ※順位・順位ウマは変動しない。ptsのみ加算。
+
+    zankyo          : 残供託本数（int）
+    kyotaku_handling: 'top_split' | 'top_east' | 'carryover'
+    seat_users      : {seat: User}
+
+    calc の構造: { seat: {'rank': int, 'pts': Decimal} }
+    """
+    D = Decimal
+
+    if kyotaku_handling == 'carryover' or zankyo == 0:
+        return calc
+
+    # 1着の座席を取得（同着あり）
+    min_rank = min(v['rank'] for v in calc.values())
+    top_seats = [s for s in SEATS if calc[s]['rank'] == min_rank]
+
+    result = {s: {'rank': calc[s]['rank'], 'pts': calc[s]['pts']} for s in SEATS}
+
+    if kyotaku_handling == 'top_east':
+        # 起家優先：複数1着でも起家に最も近い1人が総取り
+        winner = min(top_seats, key=lambda s: SEATS.index(s))
+        result[winner]['pts'] += D(zankyo)  # zankyo本 × 1000点 / 1000 = zankyo pts
+        return result
+
+    # 'top_split': 1着複数の場合は人数で分ける（端数は起家優先）
+    count = len(top_seats)
+
+    if count == 1:
+        result[top_seats[0]]['pts'] += D(zankyo)
+        return result
+
+    if count == 2:
+        total = D(zankyo)
+        half  = (total / 2).quantize(D('0.1'), rounding=ROUND_HALF_UP)
+        for s in top_seats:
+            result[s]['pts'] += half
+        return result
+
+    if count == 4:
+        total   = D(zankyo)
+        quarter = (total / 4).quantize(D('0.1'), rounding=ROUND_HALF_UP)
+        for s in top_seats:
+            result[s]['pts'] += quarter
+        return result
+
+    # count == 3
+    # 商（3n本）は3等分、端数（0〜2本）は起家優先で「400/300点」配分
+    quotient  = zankyo // 3          # 3n
+    remainder = zankyo % 3           # 0, 1, 2
+
+    base_pts = D(quotient)           # quotient本 × 1000点 / 1000
+
+    # 起家優先でソート
+    top_sorted = sorted(top_seats, key=lambda s: SEATS.index(s))
+
+    if remainder == 0:
+        for s in top_sorted:
+            result[s]['pts'] += base_pts
+    else:
+        # 端数処理：起家に近い1人が +0.4pts × remainder、残り2人が +0.3pts × remainder
+        # （400点 / 1000 = 0.4pts、300点 / 1000 = 0.3pts）
+        east_extra  = D('0.4') * remainder
+        other_extra = D('0.3') * remainder
+        for idx, s in enumerate(top_sorted):
+            extra = east_extra if idx == 0 else other_extra
+            result[s]['pts'] += base_pts + extra
 
     return result
 
@@ -458,6 +649,37 @@ def _session_context(room, session, members, rounds, yakus, readonly, session_nu
     rule = room.rule
     rounds_json = json.dumps([{'id': r.id, 'name': r.name} for r in rounds])
     yakus_json  = json.dumps([{'id': y.id, 'name': y.name} for y in yakus])
+
+    # 現セッション以前の確定済みセッションの累計pts（ユーザID→累計pts）
+    # 編集中のセッション自身は除く
+    finalized_sessions = room.sessions.filter(is_finalized=True)
+    if session and session.pk:
+        finalized_sessions = finalized_sessions.exclude(pk=session.pk)
+
+    cum_pts = {}  # user_id -> float
+    for sess in finalized_sessions:
+        for seat in ('east', 'south', 'west', 'north'):
+            player = getattr(sess, f'player_{seat}')
+            pts    = getattr(sess, f'pts_{seat}')
+            if player and pts is not None:
+                cum_pts[player.id] = float(cum_pts.get(player.id, 0)) + float(pts)
+
+    # メンバーの累計pts（未参加メンバーは0）
+    cum_pts_json = json.dumps({str(m.id): cum_pts.get(m.id, 0.0) for m in members})
+
+    # ルール情報をJSに渡す（累計pts計算用）
+    from .models import RENGO_A_UMA_TABLE
+    rule_json = json.dumps({
+        'init_points':       rule.init_points,
+        'return_points':     rule.return_points,
+        'draw_handling':     rule.draw_handling,
+        'kyotaku_handling':  rule.kyotaku_handling,
+        'uma_type':          rule.uma_type,
+        'uma1': rule.uma1, 'uma2': rule.uma2,
+        'uma3': rule.uma3, 'uma4': rule.uma4,
+        'rengo_a_uma_table': RENGO_A_UMA_TABLE,
+    })
+
     return {
         'room': room,
         'members': members,
@@ -472,7 +694,11 @@ def _session_context(room, session, members, rounds, yakus, readonly, session_nu
         'existing_rounds_json': json.dumps(existing_rounds) if existing_rounds is not None else 'null',
         'seats': [('east','起家'), ('south','南家'), ('west','西家'), ('north','北家')],
         'init_points': rule.init_points,
+        'return_points': rule.return_points,
         'draw_handling': rule.draw_handling,
+        'kyotaku_handling': rule.kyotaku_handling,
+        'cum_pts_json': cum_pts_json,
+        'rule_json': rule_json,
     }
 
 
@@ -577,6 +803,12 @@ def _save_session(request, room, session, session_number, members, rounds, yakus
         round_count = int(request.POST.get('round_count', 0))
         last_points = {seat: 0 for seat in SEATS}
 
+        # オーラス情報（残供託計算用）
+        last_round_kyotaku    = 0   # オーラス開始時の供託数
+        last_round_ryukyoku   = False
+        last_round_riichi_cnt = 0   # オーラスの立直者数
+        last_round_idx        = 0   # 実際に保存された最終局番号
+
         for i in range(1, round_count + 1):
             rm_id = request.POST.get(f'round_{i}_master')
             # 局マスタ未選択の場合はその局をスキップ（ユーザが意図的に空欄にした行）
@@ -589,6 +821,18 @@ def _save_session(request, room, session, session_number, members, rounds, yakus
             honba       = int(request.POST.get(f'round_{i}_honba', 0) or 0)
             kyotaku     = int(request.POST.get(f'round_{i}_kyotaku', 0) or 0)
             is_ryukyoku = request.POST.get(f'round_{i}_ryukyoku') == '1'
+
+            # この局の立直者数（riichi フラグが立っている座席を数える）
+            riichi_cnt = sum(
+                1 for seat in SEATS
+                if request.POST.get(f'round_{i}_{seat}_riichi') == '1'
+            )
+
+            # オーラス情報を更新（最後に通過した局が確定値になる）
+            last_round_kyotaku    = kyotaku
+            last_round_ryukyoku   = is_ryukyoku
+            last_round_riichi_cnt = riichi_cnt
+            last_round_idx        = i
 
             rr = RoundResult.objects.create(
                 session=session, round_number=i, round_master=rm,
@@ -636,7 +880,21 @@ def _save_session(request, room, session, session_number, members, rounds, yakus
 
         if finalize and round_count > 0:
             rule = room.rule
+
+            # ── 残供託の算出 ─────────────────────────────
+            # オーラスが流局でない → 残供託0本
+            # オーラスが流局 → 開始時供託数 + オーラス立直者数
+            if last_round_ryukyoku:
+                zankyo = last_round_kyotaku + last_round_riichi_cnt
+            else:
+                zankyo = 0
+
             calc = calc_pts_with_rule(last_points, seat_users, rule)
+
+            # ── 残供託の配分 ─────────────────────────────
+            if zankyo > 0:
+                calc = apply_zankyo(calc, zankyo, rule.kyotaku_handling, seat_users)
+
             GameResult.objects.filter(session=session).delete()
             for seat in SEATS:
                 rank = calc[seat]['rank']
@@ -671,7 +929,7 @@ def _calc_user_stats(target_user, room_id, rule_id):
     if rule_id:
         prr_qs = prr_qs.filter(round_result__session__room__rule_id=rule_id)
 
-    prr_list      = list(prr_qs.select_related('round_result', 'round_result__session'))
+    prr_list      = list(prr_qs.select_related('round_result', 'round_result__session', 'round_result__round_master'))
     total_kyoku   = len(prr_list)
     agari_list    = [p for p in prr_list if p.is_agari]
     houjuu_list   = [p for p in prr_list if p.is_houjuu]
@@ -734,6 +992,9 @@ def _calc_user_stats(target_user, room_id, rule_id):
         avg_score = None
 
     top_rate     = safe_div(rank_dist[1], battle_count)
+    second_rate  = safe_div(rank_dist[2], battle_count)
+    third_rate   = safe_div(rank_dist[3], battle_count)
+    forth_rate   = safe_div(rank_dist[4], battle_count)
     avoid4_rate  = safe_div(rank_dist[1] + rank_dist[2] + rank_dist[3], battle_count)
     sanka_rate   = round(safe_div(len(riichi_list), total_kyoku) + safe_div(len(furo_list), total_kyoku), 2)
 
@@ -744,10 +1005,10 @@ def _calc_user_stats(target_user, room_id, rule_id):
     furo_houjuu_list    = [p for p in prr_list if p.is_houjuu and p.is_furo]
     furo_avg            = round(sum(p.furo_count for p in prr_list) / total_kyoku, 2) if total_kyoku else 0
 
-    agari_dora_list = RoundYaku.objects.filter(
+    agari_dora_list = list(RoundYaku.objects.filter(
         round_result__in=[p.round_result for p in agari_list],
         agari_user=target_user
-    )
+    ).prefetch_related('yakus'))
     all_dora_avg        = safe_avg2(agari_dora_list,  lambda p: p.dora + p.ura_dora + p.aka_dora)
     ura_dora_avg        = round(sum(p.ura_dora for p in agari_dora_list) / len(riichi_agari), 2) if len(riichi_agari) else 0
 
@@ -755,16 +1016,203 @@ def _calc_user_stats(target_user, room_id, rule_id):
         round_result__in=[p.round_result for p in houjuu_list],
         houjuu_user=target_user, ura_dora__gte=1
     ).count() if houjuu_list else 0
-    houjuu_dora_list = RoundYaku.objects.filter(
+    houjuu_dora_list = list(RoundYaku.objects.filter(
         round_result__in=[p.round_result for p in houjuu_list],
         houjuu_user=target_user
-    )
+    ))
     houjuu_ura_dora_list = RoundYaku.objects.filter(
         round_result__in=[p.round_result for p in houjuu_list],
         houjuu_user=target_user, yakus__name='立直'
     )
     houjuu_all_dora_avg = safe_avg2(houjuu_dora_list,  lambda p: p.dora + p.ura_dora + p.aka_dora)
     houjuu_ura_dora_avg = round(sum(p.ura_dora for p in houjuu_dora_list) / len(houjuu_ura_dora_list), 2) if len(houjuu_ura_dora_list) else 0
+
+    # ──────────────────────────────────────────
+    # 追加統計
+    # ──────────────────────────────────────────
+    total_agari = len(agari_list)
+
+    # トップラス麻雀率／モブ率
+    top_last_rate = safe_div(rank_dist[1] + rank_dist[4], battle_count)
+    mob_rate      = safe_div(rank_dist[2] + rank_dist[3], battle_count)
+
+    # 関与率
+    kanyo_rate = round(safe_div(len(agari_list), total_kyoku) + safe_div(len(houjuu_list), total_kyoku), 2)
+
+    # 傍観率：局収支・供託点ともに0の局
+    boukan_count = sum(1 for p in prr_list if p.kyoku_balance == 0 and p.kyotaku_points == 0)
+    boukan_rate  = safe_div(boukan_count, total_kyoku)
+
+    # 供託点合計
+    kyotaku_total = sum(p.kyotaku_points for p in prr_list)
+
+    # 和了回数・放銃回数
+    agari_count  = total_agari
+    houjuu_count = len(houjuu_list)
+
+    # 翻数・ドラ集計（和了時）
+    han_total         = sum(p.han for p in agari_dora_list)
+    dora_omote_total  = sum(p.dora     for p in agari_dora_list)
+    dora_ura_total    = sum(p.ura_dora for p in agari_dora_list)
+    dora_aka_total    = sum(p.aka_dora for p in agari_dora_list)
+    dora_total        = dora_omote_total + dora_ura_total + dora_aka_total
+    avg_han           = safe_avg2(agari_dora_list, lambda p: p.han)
+    dora_ratio        = safe_div(dora_total, han_total)
+
+    # 翻数・ドラ集計（放銃時）
+    houjuu_han_total        = sum(p.han for p in houjuu_dora_list)
+    houjuu_dora_omote_total = sum(p.dora     for p in houjuu_dora_list)
+    houjuu_dora_ura_total   = sum(p.ura_dora for p in houjuu_dora_list)
+    houjuu_dora_aka_total   = sum(p.aka_dora for p in houjuu_dora_list)
+    houjuu_dora_total       = houjuu_dora_omote_total + houjuu_dora_ura_total + houjuu_dora_aka_total
+    houjuu_avg_han          = safe_avg2(houjuu_dora_list, lambda p: p.han)
+    houjuu_dora_ratio       = safe_div(houjuu_dora_total, houjuu_han_total)
+
+    # 裏3回数・裏3放銃回数
+    ura3_count        = sum(1 for p in agari_dora_list if p.ura_dora >= 3)
+    ura3_houjuu_count = sum(1 for p in houjuu_dora_list if p.ura_dora >= 3)
+
+    # 役一覧（M2M）を事前展開
+    agari_yaku_sets = [set(y.name for y in r.yakus.all()) for r in agari_dora_list]
+
+    def group_count(group):
+        g = set(group)
+        return sum(1 for names in agari_yaku_sets if names & g)
+
+    luck_yaku_rate     = safe_div(group_count(YAKU_LUCK),     total_agari)
+    flush_yaku_rate    = safe_div(group_count(YAKU_FLUSH),    total_agari)
+    menzen_yaku_rate   = safe_div(group_count(YAKU_MENZEN),   total_agari)
+    terminal_yaku_rate = safe_div(group_count(YAKU_TERMINAL), total_agari)
+    tanyao_rate        = safe_div(group_count(YAKU_TANYAO),   total_agari)
+    yakuhai_rate       = safe_div(group_count(YAKU_YAKUHAI),  total_agari)
+    han1_yaku_rate     = safe_div(group_count(YAKU_HAN1),     total_agari)
+    han2_yaku_rate     = safe_div(group_count(YAKU_HAN2),     total_agari)
+    han3_yaku_rate     = safe_div(group_count(YAKU_HAN3),     total_agari)
+    han6_yaku_rate     = safe_div(group_count(YAKU_HAN6),     total_agari)
+    yakuman_yaku_rate  = safe_div(group_count(YAKU_YAKUMAN),  total_agari)
+
+    # 役複合率（ドラは含まない）
+    fukugou_count = sum(1 for names in agari_yaku_sets if len(names) >= 2)
+    fukugou_rate  = safe_div(fukugou_count, total_agari)
+
+    # 翻数別和了率（RoundYaku.han ベース）
+    han1_rate = safe_div(sum(1 for p in agari_dora_list if p.han == 1), total_agari)
+    han2_rate = safe_div(sum(1 for p in agari_dora_list if p.han == 2), total_agari)
+    han3_rate = safe_div(sum(1 for p in agari_dora_list if p.han == 3), total_agari)
+    han4_rate = safe_div(sum(1 for p in agari_dora_list if p.han == 4), total_agari)
+    han5_rate = safe_div(sum(1 for p in agari_dora_list if p.han == 5), total_agari)
+    han11plus_rate = safe_div(sum(1 for p in agari_dora_list if p.han >= 11), total_agari)
+    haneman_rate = safe_div(sum(1 for p in agari_dora_list if p.han in (6, 7)), total_agari)
+    baiman_rate  = safe_div(sum(1 for p in agari_dora_list if p.han in (8, 9, 10)), total_agari)
+    sanbaiman_rate = round(han11plus_rate - yakuman_yaku_rate, 2)
+    yakuman_rate   = yakuman_yaku_rate
+
+    # 親判定（局名末尾の数字から）
+    def is_oya(p):
+        return _get_oya_seat(p.round_result.round_master.name) == p.seat
+
+    mangan_count = sum(
+        1 for p in agari_list
+        if (is_oya(p) and p.kyoku_balance == 12000) or (not is_oya(p) and p.kyoku_balance == 8000)
+    )
+    mangan_rate = safe_div(mangan_count, total_agari)
+
+    kobayashi_count = sum(
+        1 for p in agari_list
+        if (is_oya(p) and p.kyoku_balance == 1500)
+        or (not is_oya(p) and p.kyoku_balance in (1000, 1100))
+    )
+    kobayashi_rate = safe_div(kobayashi_count, total_agari)
+
+    kurosawa_rate = round(mangan_rate + haneman_rate + baiman_rate + sanbaiman_rate + yakuman_rate, 2)
+
+    # その他キャラ役率
+    haggy_rate  = safe_div(group_count(['三色同順']), total_agari)
+    saki_rate   = safe_div(group_count(['嶺上開花']), total_agari)
+    ama_e_rate  = safe_div(group_count(['海底摸月']), total_agari)
+
+    # タコス率：開局（東1局0本場）の和了
+    tacos_count = sum(
+        1 for p in agari_list
+        if p.round_result.round_master.name == '東1' and p.round_result.honba == 0
+    )
+    tacos_rate = safe_div(tacos_count, battle_count)
+
+    # 亦野誠子率：副露数3での和了
+    matano_count = sum(1 for p in agari_list if p.furo_count == 3)
+    matano_rate  = safe_div(matano_count, total_agari)
+
+    # 園城寺怜率：立直・一発・門前清自摸和が全て複合
+    onjouji_set = {'立直', '一発', '門前清自摸和'}
+    onjouji_count = sum(1 for names in agari_yaku_sets if onjouji_set <= names)
+    onjouji_rate  = safe_div(onjouji_count, total_agari)
+
+    # リーのみ率：役が「立直」のみ（ドラ有無は問わない）
+    ri_nomi_count = sum(1 for names in agari_yaku_sets if names == {'立直'})
+    ri_nomi_rate  = safe_div(ri_nomi_count, total_agari)
+
+    # 鳴いたら降りるな率
+    furo_tenpai_list = [p for p in prr_list if p.is_furo and p.ryukyoku_state == 'tenpai']
+    naitara_numerator = len(furo_agari_list) + len(furo_houjuu_list) + len(furo_tenpai_list)
+    naitara_rate = safe_div(naitara_numerator, len(furo_list))
+
+    # 魂天力
+    tamashii_power = rank_dist[1] * 70 + rank_dist[2] * 35 + rank_dist[3] * -5 + rank_dist[4] * -145
+
+    # 原点超え率・オーラス和了率・オーラス着順UP率・マクラーレン率
+    gr_list = list(gr_qs.select_related('session__room__rule'))
+    genten_count = sum(1 for gr in gr_list if gr.final_points >= gr.session.room.rule.init_points)
+    genten_chouka_rate = safe_div(genten_count, battle_count)
+
+    prr_by_session = defaultdict(list)
+    for p in prr_list:
+        prr_by_session[p.round_result.session_id].append(p)
+
+    # 全座席の各局の持ち点（オーラス開始時点の判定用）
+    points_by_session_round = defaultdict(dict)
+    for p in PlayerRoundResult.objects.filter(
+        round_result__session_id__in=session_ids
+    ).select_related('round_result'):
+        key = (p.round_result.session_id, p.round_result.round_number)
+        points_by_session_round[key][p.seat] = p.points_after
+
+    gr_by_session = {gr.session_id: gr for gr in gr_list}
+
+    oorasu_agari_count = 0
+    rankup_count = 0
+    maclaren_count = 0
+    for sid, session_prrs in prr_by_session.items():
+        if not session_prrs:
+            continue
+        max_round = max(p.round_result.round_number for p in session_prrs)
+        last_prr = next((p for p in session_prrs if p.round_result.round_number == max_round), None)
+        if last_prr and last_prr.is_agari:
+            oorasu_agari_count += 1
+
+        gr = gr_by_session.get(sid)
+        if not gr or not last_prr:
+            continue
+
+        rule = gr.session.room.rule
+        if max_round == 1:
+            before_points = {s: rule.init_points for s in SEATS}
+        else:
+            before_points = points_by_session_round.get((sid, max_round - 1))
+            if not before_points or len(before_points) != 4:
+                continue
+
+        before_rank_map = _calc_point_rank_map(before_points, rule.draw_handling)
+        before_rank = before_rank_map.get(last_prr.seat)
+        after_rank  = gr.rank
+        if before_rank is not None:
+            if after_rank < before_rank:
+                rankup_count += 1
+            elif after_rank > before_rank:
+                maclaren_count += 1
+
+    oorasu_agari_rate  = safe_div(oorasu_agari_count, battle_count)
+    oorasu_rankup_rate = safe_div(rankup_count, battle_count)
+    maclaren_rate      = safe_div(maclaren_count, battle_count)
 
 
     return {
@@ -794,7 +1242,7 @@ def _calc_user_stats(target_user, room_id, rule_id):
         'riichi_income':        riichi_income,
         'riichi_loss':          riichi_loss,
         'riichi_ryukyoku_rate': safe_div(len(riichi_ryukyoku), len(riichi_list)),
-        'ippatsu_rate':         safe_div(ippatsu_count, len(riichi_list)),
+        'ippatsu_rate':         safe_div(ippatsu_count, len(riichi_agari)),
         'ura_rate':             safe_div(ura_agari, len(riichi_agari)),
         'daten_efficiency':     打点効率,
         'juten_loss':           銃点損失,
@@ -808,6 +1256,75 @@ def _calc_user_stats(target_user, room_id, rule_id):
         'houjuu_ura_rate':      safe_div(ura_houju, len(houjuu_ura_dora_list)),
         'houjuu_all_dora_avg':  houjuu_all_dora_avg,
         'houjuu_ura_dora_avg':  houjuu_ura_dora_avg,
+
+        # ── 追加統計 ──
+        'top_last_rate':        top_last_rate,
+        'mob_rate':             mob_rate,
+        'genten_chouka_rate':   genten_chouka_rate,
+        'kanyo_rate':           kanyo_rate,
+        'boukan_rate':          boukan_rate,
+        'oorasu_agari_rate':    oorasu_agari_rate,
+        'oorasu_rankup_rate':   oorasu_rankup_rate,
+        'maclaren_rate':        maclaren_rate,
+        'kyotaku_total':        kyotaku_total,
+        'agari_count':          agari_count,
+        'avg_han':              avg_han,
+        'dora_total':           dora_total,
+        'dora_omote_total':     dora_omote_total,
+        'dora_ura_total':       dora_ura_total,
+        'dora_aka_total':       dora_aka_total,
+        'dora_ratio':           dora_ratio,
+        'houjuu_count':         houjuu_count,
+        'houjuu_avg_han':       houjuu_avg_han,
+        'houjuu_dora_total':       houjuu_dora_total,
+        'houjuu_dora_omote_total': houjuu_dora_omote_total,
+        'houjuu_dora_ura_total':   houjuu_dora_ura_total,
+        'houjuu_dora_aka_total':   houjuu_dora_aka_total,
+        'houjuu_dora_ratio':       houjuu_dora_ratio,
+
+        'luck_yaku_rate':     luck_yaku_rate,
+        'flush_yaku_rate':    flush_yaku_rate,
+        'menzen_yaku_rate':   menzen_yaku_rate,
+        'terminal_yaku_rate': terminal_yaku_rate,
+        'tanyao_rate':        tanyao_rate,
+        'yakuhai_rate':       yakuhai_rate,
+        'han1_yaku_rate':     han1_yaku_rate,
+        'han2_yaku_rate':     han2_yaku_rate,
+        'han3_yaku_rate':     han3_yaku_rate,
+        'han6_yaku_rate':     han6_yaku_rate,
+        'yakuman_yaku_rate':  yakuman_yaku_rate,
+
+        'fukugou_rate':  fukugou_rate,
+        'han1_rate':     han1_rate,
+        'han2_rate':     han2_rate,
+        'han3_rate':     han3_rate,
+        'han4_rate':     han4_rate,
+        'han5_rate':     han5_rate,
+        'mangan_rate':   mangan_rate,
+        'haneman_rate':  haneman_rate,
+        'baiman_rate':   baiman_rate,
+        'sanbaiman_rate':sanbaiman_rate,
+        'yakuman_rate':  yakuman_rate,
+
+        'kurosawa_rate':  kurosawa_rate,
+        'kobayashi_rate': kobayashi_rate,
+
+        'haggy_rate':  haggy_rate,
+        'saki_rate':   saki_rate,
+        'tacos_rate':  tacos_rate,
+        'ama_e_rate':  ama_e_rate,
+        'matano_rate': matano_rate,
+        'onjouji_rate':onjouji_rate,
+
+        'naitara_rate':      naitara_rate,
+        'ri_nomi_rate':      ri_nomi_rate,
+        'ura3_count':        ura3_count,
+        'ura3_houjuu_count': ura3_houjuu_count,
+        'tamashii_power':    tamashii_power,
+        
+        'second_rate':    second_rate,
+        'third_rate':     third_rate,
+        'forth_rate':     forth_rate,
     }
 
 
@@ -867,6 +1384,69 @@ def battle_record_view(request):
             # 順位付け
             for idx, row in enumerate(rows, 1):
                 row['rank_no'] = idx
+
+            # ── 最良/最悪の色付け ─────────────────────────
+            # 降順（大きい方が良い）
+            DESC_KEYS = [
+                'avg_score', 'agari_rate', 'riichi_rate', 'furo_rate', 'sanka_rate',
+                'agari_income', 'top_rate', 'avoid4_rate', 'tsumo_rate', 'dama_rate',
+                'ryukyoku_rate', 'tenpai_rate', 'riichi_agari_rate', 'riichi_balance',
+                'riichi_income', 'ippatsu_rate', 'ura_rate', 'daten_efficiency',
+                'adjusted_efficiency', 'kyoku_balance_avg',
+                'furo_agari_rate', 'furo_avg', 'all_dora_avg', 'ura_dora_avg',
+                'top_last_rate', 'mob_rate', 'genten_chouka_rate', 'kanyo_rate',
+                'boukan_rate', 'oorasu_agari_rate', 'oorasu_rankup_rate',
+                'kyotaku_total', 'agari_count', 'avg_han',
+                'dora_total', 'dora_omote_total', 'dora_ura_total', 'dora_aka_total', 'dora_ratio',
+                'luck_yaku_rate', 'flush_yaku_rate', 'menzen_yaku_rate', 'terminal_yaku_rate',
+                'tanyao_rate', 'yakuhai_rate',
+                'han1_yaku_rate', 'han2_yaku_rate', 'han3_yaku_rate', 'han6_yaku_rate',
+                'yakuman_yaku_rate', 'fukugou_rate',
+                'han1_rate', 'han2_rate', 'han3_rate', 'han4_rate', 'han5_rate',
+                'mangan_rate', 'haneman_rate', 'baiman_rate', 'sanbaiman_rate',
+                'yakuman_rate', 'kurosawa_rate', 'kobayashi_rate',
+                'haggy_rate', 'saki_rate', 'tacos_rate', 'ama_e_rate',
+                'matano_rate', 'onjouji_rate', 'naitara_rate', 'ri_nomi_rate',
+                'ura3_count', 'tamashii_power','second_rate','third_rate','forth_rate',
+            ]
+            # 昇順（小さい方が良い）
+            ASC_KEYS = [
+                'houjuu_rate', 'houjuu_loss', 'avg_rank', 'riichi_houjuu_rate',
+                'riichi_loss', 'riichi_ryukyoku_rate', 'juten_loss',
+                'furo_houjuu_rate', 'houjuu_ura_rate', 'houjuu_all_dora_avg', 'houjuu_ura_dora_avg',
+                'maclaren_rate', 'houjuu_count', 'houjuu_avg_han',
+                'houjuu_dora_total', 'houjuu_dora_omote_total', 'houjuu_dora_ura_total',
+                'houjuu_dora_aka_total', 'houjuu_dora_ratio', 'ura3_houjuu_count',
+            ]
+
+            def _val(row, key):
+                v = row.get(key)
+                try:
+                    return float(v) if v is not None else None
+                except (TypeError, ValueError):
+                    return None
+
+            for key in DESC_KEYS + ASC_KEYS:
+                vals = [(_val(r, key), i) for i, r in enumerate(rows) if _val(r, key) is not None]
+                if len(vals) < 2:
+                    continue
+                is_desc = key in DESC_KEYS
+                sorted_vals = sorted(vals, key=lambda x: x[0], reverse=is_desc)
+                best_val  = sorted_vals[0][0]
+                worst_val = sorted_vals[-1][0]
+                if best_val == worst_val:
+                    continue
+                for row in rows:
+                    v = _val(row, key)
+                    if v is None:
+                        row[f'cls_{key}'] = ''
+                    elif v == best_val:
+                        row[f'cls_{key}'] = 'hi'
+                    elif v == worst_val:
+                        row[f'cls_{key}'] = 'lo'
+                    else:
+                        row[f'cls_{key}'] = ''
+
             all_stats = rows
 
     elif user_id:

@@ -20,6 +20,20 @@ DRAW_HANDLING_CHOICES = [
     ('east_priority','起家優先'),
 ]
 
+UMA_TYPE_CHOICES = [
+    ('fixed',   '固定ウマ'),
+    ('rengo_a', '連盟Aルール（浮き人数連動）'),
+]
+
+# 連盟Aルール：浮き人数ごとの順位ウマ [1着, 2着, 3着, 4着]
+RENGO_A_UMA_TABLE = {
+    4: [  0,   0,   0,   0],
+    3: [  8,   3,   1, -12],
+    2: [  8,   4,  -4,  -8],
+    1: [ 12,  -1,  -3,  -8],
+    0: [  0,   0,   0,   0],
+}
+
 class MahjongRule(models.Model):
     """対局ルールマスタ"""
     name    = models.CharField('ルール名', max_length=100)
@@ -34,6 +48,12 @@ class MahjongRule(models.Model):
     uma2 = models.IntegerField('順位ウマ2（2着）', default=0)
     uma3 = models.IntegerField('順位ウマ3（3着）', default=0)
     uma4 = models.IntegerField('順位ウマ4（4着）', default=-20)
+
+    # ウマ種別
+    uma_type = models.CharField(
+        'ウマ種別', max_length=20,
+        choices=UMA_TYPE_CHOICES, default='fixed'
+    )
 
     # 終局時供託の扱い
     kyotaku_handling = models.CharField(
@@ -54,12 +74,23 @@ class MahjongRule(models.Model):
     def __str__(self):
         return self.name
 
-    def get_uma(self, rank):
+    def get_uma(self, rank, float_count=None):
+        """
+        rank: 1〜4
+        float_count: 連盟Aルール時のみ使用（浮き人数）
+        """
+        if self.uma_type == 'rengo_a':
+            if float_count is None:
+                raise ValueError('連盟Aルールではfloat_countが必要です')
+            return RENGO_A_UMA_TABLE[float_count][rank - 1]
         return [self.uma1, self.uma2, self.uma3, self.uma4][rank - 1]
 
     def accordion_text(self):
         """アコーディオン表示テキスト"""
-        uma_str = f'{abs(self.uma2)}-{self.uma1}'
+        if self.uma_type == 'rengo_a':
+            uma_str = '浮き人数連動（連盟Aルール）'
+        else:
+            uma_str = f'{abs(self.uma2)}-{self.uma1}'
         return (
             f'基本ルール：{self.init_points:,}点持ち{self.return_points:,}点返し、{uma_str}\n'
             f'終局時供託の扱い：{self.get_kyotaku_handling_display()}\n'

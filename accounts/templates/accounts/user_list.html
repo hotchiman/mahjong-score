@@ -25,6 +25,7 @@
       </div>
     </div>
     {% if users %}
+    <div class="table-scroll">
     <table class="data-table">
       <thead><tr><th>ID</th><th>ユーザ名</th><th>権限</th><th>登録日</th><th>操作</th></tr></thead>
       <tbody>
@@ -50,6 +51,7 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
     {% else %}
     <div class="empty-state"><div class="empty-state-icon">👤</div>登録されているユーザはいません。</div>
     {% endif %}

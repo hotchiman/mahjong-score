@@ -29,6 +29,7 @@
       </p>
       <form method="post">
         {% csrf_token %}
+        <div class="table-scroll">
         <table class="data-table" style="margin-bottom:20px">
           <thead>
             <tr><th>座席</th><th>ユーザ名</th><th>最終持ち点</th><th>着順</th><th>獲得pts</th></tr>
@@ -52,6 +53,7 @@
             {% endfor %}
           </tbody>
         </table>
+        </div>
         <div class="form-actions">
           <button type="submit" class="btn btn-accent">更新する</button>
           <a href="{% url 'game_result_list' room.id %}" class="btn btn-ghost">キャンセル</a>

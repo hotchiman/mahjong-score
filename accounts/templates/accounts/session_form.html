@@ -141,9 +141,6 @@
       <button type="button" class="btn btn-ghost btn-sm" onclick="addRound()">＋ 局を追加</button>
       <button type="button" class="btn btn-danger btn-sm" onclick="removeLastRound()">最終局を削除</button>
     </div>
-    <p style="margin-top:10px;font-size:12px;color:var(--ink-muted);border-left:3px solid var(--border);padding-left:10px">
-      終局時に残った供託がトップ取りの場合、オーラスの供託点に追加してください。
-    </p>
     {% endif %}
 
     <form id="main-form" method="post" action="">
@@ -287,7 +284,7 @@
             <span id="ru_rule_name" class="badge badge-rule" style="font-size:11px"></span>
           </div>
           <div style="display:flex;align-items:center;gap:6px">
-            <input type="checkbox" id="ru_cumulative" disabled>
+            <input type="checkbox" id="ru_cumulative" onchange="onRuCumulativeChange()">
             <label for="ru_cumulative" style="font-size:12px;color:var(--ink-muted)">累計獲得ptsを加味</label>
           </div>
         </div>
@@ -312,12 +309,26 @@
               <span id="oya_dis_{{ seat_key }}">{{ seat_label }} ： <span style="color:blue;font-size:12px">親</span></span>
               <span id="ko_dis_{{ seat_key }}" style="display:none">{{ seat_label }}<span style="color:green;font-size:12px"> </span></span>
             </div>
-            <div id="ru_name_{{ seat_key }}" style="font-size:12px;font-weight:700;margin-bottom:7px;color:var(--ink);text-align:center">—</div>
+            <div id="ru_name_{{ seat_key }}" style="font-size:12px;font-weight:700;margin-bottom:0px;color:var(--ink);text-align:center">—</div>
+            <div style="margin-bottom:2px;text-align:center">
+              <span id="ru_cum_rank_{{ seat_key }}" style="display:none;font-size:10px;font-family:var(--mono);text-align:center"></span>
+              <span id="ru_cum_pts_{{ seat_key }}" style="display:none;font-size:10px;color:var(--ink-muted);font-family:var(--mono);text-align:center;margin-left:2px">—</span>
+            </div>
             <div style="display:flex;flex-direction:column";align-items:center;gap:6px;margin-bottom:4px;text-align:center">
               <span id="ru_rank_{{ seat_key }}" style="font-family:var(--mono);font-size:12px;font-weight:700;min-width:28px;text-align:center"></span>
               <input type="number" inputmode="numeric" id="ru_pts_{{ seat_key }}" class="m-num-pts" step="100" 
                 style="width:70px;font-size:12px;font-family:var(--mono);display: block; margin: 0 auto"
                 placeholder="0" oninput="updateRankUpRanks()">
+            </div>
+            <!-- ① 現持ち点による獲得pts / ② 獲得pts着順 -->
+            <div style="text-align:center">
+              <!-- <span id="ru_now_rank_{{ seat_key }}" style="font-size:10px;font-family:var(--mono);color:var(--ink-muted)"></span> -->
+              <span id="ru_now_pts_{{ seat_key }}" style="font-size:9px;font-family:var(--mono);color:var(--ink-muted);margin-left:2px">(—pts)</span>
+            </div>
+            <!-- ③ 累計合計pts / ④ 累計着順（累計加味ONのみ表示） -->
+            <div id="ru_total_row_{{ seat_key }}" style="display:none;text-align:center">
+              <span id="ru_total_rank_{{ seat_key }}" style="font-size:10px;font-family:var(--mono);color:#1565c0;font-weight:bold"></span>
+              <span id="ru_total_pts_{{ seat_key }}" style="font-size:10px;font-family:var(--mono);color:#000000;margin-left:2px">—</span>
             </div>
             <div style="display:flex;align-items:center;gap:4px;margin-top:5px;margin-left:3px">
               <input type="checkbox" id="ru_riichi_{{ seat_key }}" oninput="updateRankUpRanks()">
@@ -367,6 +378,11 @@
               <div style="font-size:10px;color:var(--ink-muted)">{{ seat_label }}</div>
               <div id="ru_after_rank_{{ seat_key }}" style="font-size:11px;font-weight:700;font-family:var(--mono)">—</div>
               <div id="ru_after_pts_{{ seat_key }}" style="font-size:12px;font-family:var(--mono);color:var(--ink-soft)">—</div>
+              <div id="ru_after_now_pts_{{ seat_key }}" style="font-size:9px;font-family:var(--mono);color:var(--ink-muted);margin-left:4px">(—pts)</div>
+              <div>
+                <span id="ru_after_cum_rank_{{ seat_key }}" style="display:none;font-size:10px;font-family:var(--mono);color:#1565c0;font-weight:bold"></span>
+                <span id="ru_after_cum_pts_{{ seat_key }}" style="display:none;font-size:10px;font-family:var(--mono);color:#000000;margin-left:2px">—</span>
+              </div>
             </div>
             {% endfor %}
           </div>
@@ -565,7 +581,11 @@ const YAKUS    = {{ yakus_json|safe }};
 const READONLY = {{ readonly_json|safe }};
 const EXISTING = {{ existing_rounds_json|default_if_none:"null"|safe }};
 const INIT_PTS = {{ init_points|default:25000 }};
+const RETURN_PTS = {{ return_points|default:25000 }};
 const DRAW_HANDLING = '{{ draw_handling|default:"split_east" }}';
+const KYOTAKU_HANDLING = '{{ kyotaku_handling|default:"top_split" }}';
+const CUM_PTS  = {{ cum_pts_json|default:"{}"|safe }};   // {user_id_str: float}
+const RULE     = {{ rule_json|default:"{}"|safe }};       // ルール設定全体
 
 let roundCount = 0;
 
@@ -684,7 +704,7 @@ function updateSeatLiveDisplay() {
   // 着順を計算（ルールの同点処理に応じる）
   const rankMap = calcRankMap(lastPoints);
 
-  const rankColors = {1:'#c8a000', 2:'#2e86c1', 3:'#c87941', 4:'#922b21'};
+  const rankColors = {1:'#1565C0', 2:'#32cd32', 3:'#ff8c00', 4:'#ff0000'};
   SEATS.forEach(seat => {
     const el = document.getElementById(`seat-live-${seat}`);
     if (!el) return;
@@ -1011,8 +1031,27 @@ function saveForm(finalize) {
       totalFinal += parseInt((el && el.value) ? el.value : 0) || 0;
     });
     const expected = INIT_PTS * 4;
+
+    // 残供託の計算（確認ダイアログ表示用）
+    // オーラスが流局の場合：オーラス開始時の供託数 + オーラスの立直者数
+    let zankyoCount = 0;
+    const lastRyukyokuEl = document.getElementById(`round_${roundCount}_ryukyoku`);
+    const isLastRyukyoku = lastRyukyokuEl && lastRyukyokuEl.checked;
+    if (isLastRyukyoku) {
+      const kyotakuEl = document.getElementById(`round_${roundCount}_kyotaku`);
+      const kyotakuVal = parseInt((kyotakuEl && kyotakuEl.value) ? kyotakuEl.value : 0) || 0;
+      let riichiCnt = 0;
+      SEATS.forEach(seat => {
+        const riichiEl = document.getElementById(`round_${roundCount}_${seat}_riichi`);
+        if (riichiEl && riichiEl.checked) riichiCnt++;
+      });
+      zankyoCount = kyotakuVal + riichiCnt;
+    }
+
     if (totalFinal !== expected) {
-      const ok = confirm(`最終持ち点の合計が${totalFinal.toLocaleString()}点です（正常値：${expected.toLocaleString()}点）。\n確定してよろしいでしょうか。`);
+      const ok = confirm(
+        `最終持ち点の合計が${totalFinal.toLocaleString()}点です（正常値：${expected.toLocaleString()}点）。\n確定してよろしいでしょうか。（残供託：${zankyoCount}本）`
+      );
       if (!ok) return;
       h('point_sum_confirmed', '1');
     }
@@ -1119,6 +1158,20 @@ function openModal(rowIdx) {
   if (agariSel)  document.getElementById('m_agari_user').value  = agariSel.value  || '';
   if (houjuuSel) document.getElementById('m_houjuu_user').value = houjuuSel.value || '';
 
+  // 放銃者：放銃チェックが立っている座席から復元
+  let houjuuRestoredVal = houjuuSel ? (houjuuSel.value || '') : '';
+  if (!houjuuRestoredVal) {
+    SEATS.forEach(seat => {
+      const hEl = document.getElementById(`round_${rowIdx}_${seat}_houjuu`);
+      if (hEl && hEl.checked) {
+        // その座席のユーザIDを player_SEAT セレクトから取得し、m_houjuu_user のオプションから探す
+        const playerSel = document.getElementById('player_' + seat);
+        if (playerSel && playerSel.value) houjuuRestoredVal = playerSel.value;
+      }
+    });
+  }
+  document.getElementById('m_houjuu_user').value = houjuuRestoredVal;
+
   // ── 役を復元 ──
   const yakuList = document.getElementById(`yaku-list-${rowIdx}`);
   const mYakuList = document.getElementById('m_yaku_list');
@@ -1146,6 +1199,50 @@ function openModal(rowIdx) {
   // 流局状態に応じてエリア切替
   toggleRyukyoku();
   onModalAgariChange();
+  if (houjuuSel.value && agariSel.value) document.getElementById('m_houjuu_user').value = houjuuSel.value || '';
+  updateModalWinPts();
+
+  // ── 局収支から和了点を逆算して設定 ──
+  // (和了者が確定している場合のみ、リスト内の最近似値を選択)
+  const mAgariVal  = document.getElementById('m_agari_user').value;
+  const mHoujuuVal = document.getElementById('m_houjuu_user').value;
+  if (mAgariVal && !document.getElementById('m_ryukyoku').checked) {
+    const mAgariSel  = document.getElementById('m_agari_user');
+    const mAgariSeat = Array.from(mAgariSel.options).find(o => o.value === mAgariVal)?.dataset?.seat;
+    if (mAgariSeat) {
+      const balanceEl = document.getElementById(`round_${rowIdx}_${mAgariSeat}_balance`);
+      // balance フィールドは純粋な局収支（本場・供託は別フィールド）
+      const balance  = balanceEl ? (parseInt(balanceEl.value) || 0) : 0;
+      const isRon    = !!mHoujuuVal;
+      const oyaSeat  = getModalOyaSeat();
+      const isOya    = mAgariSeat === oyaSeat;
+
+      const winPtsSel = document.getElementById('m_win_pts');
+      if (winPtsSel && balance > 0) {
+        let bestOption = '';
+        let bestDiff   = Infinity;
+        Array.from(winPtsSel.options).forEach(opt => {
+          if (!opt.value) return;
+          const raw = opt.value.replace(/,/g, '');
+          let expectedBalance = 0;
+          if (isRon) {
+            expectedBalance = parseInt(raw) || 0;
+          } else if (isOya) {
+            const allNum = parseInt(raw.replace(/all/gi, '')) || 0;
+            expectedBalance = allNum * 3;
+          } else {
+            const parts = raw.split('-');
+            const ko  = parseInt(parts[0]) || 0;
+            const oya = parseInt(parts[1]) || 0;
+            expectedBalance = ko * 2 + oya;
+          }
+          const diff = Math.abs(balance - expectedBalance);
+          if (diff < bestDiff) { bestDiff = diff; bestOption = opt.value; }
+        });
+        if (bestOption) winPtsSel.value = bestOption;
+      }
+    }
+  }
 
   overlay.style.display = 'block';
 }
@@ -1511,6 +1608,12 @@ function applyModal() {
     setC(`round_${i}_${seat}_riichi`, true);
     kyotakuPts[seat] = (kyotakuPts[seat] || 0) - 1000;
   });
+  // 立直者でない座席の立直チェックをOFF
+  SEATS.forEach(seat => {
+    if (!riichiSeats.includes(seat)) {
+      setC(`round_${i}_${seat}_riichi`, false);
+    }
+  });
 
   // ── 供託点を反映 ──
   SEATS.forEach(s => {
@@ -1529,6 +1632,65 @@ function applyModal() {
       if (num) setV(`round_${i}_${seatVal}_furo_count`, num.value || '0');
     }
   });
+
+  // ── 和了者・放銃者・流局状態のリセット ──
+  // 「反映」時に簡易入力と直接関係しない明細フィールドをデフォルト値に揃える
+
+  if (isRyu) {
+    // 流局時：全座席の和了チェック・和了状態・放銃チェックをOFF/「-」に
+    SEATS.forEach(s => {
+      setC(`round_${i}_${s}_agari`,  false);
+      setV(`round_${i}_${s}_agari_method`, '');
+      setC(`round_${i}_${s}_houjuu`, false);
+    });
+    // 役欄（和了者・放銃者・翻・表・裏・赤・役）をリセット
+    setV(`r${i}_yaku_agari`,  '');
+    setV(`r${i}_yaku_houjuu`, '');
+    setV(`r${i}_yaku_han`,  '0');
+    setV(`r${i}_yaku_dora`, '0');
+    setV(`r${i}_yaku_ura`,  '0');
+    setV(`r${i}_yaku_aka`,  '0');
+    const yakuList = document.getElementById(`yaku-list-${i}`);
+    if (yakuList) {
+      yakuList.innerHTML = '';
+      const uid = `yi-${i}-empty`; const div = document.createElement('div');
+      div.className = 'yaku-row-item'; div.id = uid;
+      div.innerHTML = yakuSelectHTML(i, null) +
+        `<button type="button" class="del-yaku-btn" onclick="removeYaku('${uid}')">✕</button>`;
+      yakuList.appendChild(div);
+      refreshMemberSelects(i);
+    }
+  } else {
+    // 非流局時：流局状態を「-」にリセット
+    SEATS.forEach(s => {
+      setV(`round_${i}_${s}_ryukyoku_state`, '');
+    });
+
+    // 和了者でない座席の和了チェック・和了状態をリセット
+    const agariUserVal2 = document.getElementById('m_agari_user').value;
+    const agariSel2     = document.getElementById('m_agari_user');
+    const agariSeat2    = agariUserVal2
+      ? (Array.from(agariSel2.options).find(o => o.value === agariUserVal2)?.dataset?.seat)
+      : null;
+    SEATS.forEach(s => {
+      if (s !== agariSeat2) {
+        setC(`round_${i}_${s}_agari`, false);
+        setV(`round_${i}_${s}_agari_method`, '');
+      }
+    });
+
+    // 放銃者でない座席の放銃チェックをリセット
+    const houjuuVal2    = document.getElementById('m_houjuu_user').value;
+    const houjuuSel2    = document.getElementById('m_houjuu_user');
+    const houjuuSeat2   = houjuuVal2
+      ? (Array.from(houjuuSel2.options).find(o => o.value === houjuuVal2)?.dataset?.seat)
+      : null;
+    SEATS.forEach(s => {
+      if (s !== houjuuSeat2) {
+        setC(`round_${i}_${s}_houjuu`, false);
+      }
+    });
+  }
 
   // ── 持ち点を再計算 ──
   recalcAllPoints();
@@ -1585,6 +1747,22 @@ function openRankUpModal() {
     if (ptsInput) ptsInput.value = initPts;
   });
 
+  // チェックボックスをOFFにリセットし、累計pts表示を非表示にする
+  const cumCb = document.getElementById('ru_cumulative');
+  if (cumCb) cumCb.checked = false;
+  SEATS.forEach(seat => {
+    const cumEl    = document.getElementById(`ru_cum_pts_${seat}`);
+    const cumRankEl = document.getElementById(`ru_cum_rank_${seat}`);
+    const afterCum = document.getElementById(`ru_after_cum_pts_${seat}`);
+    const afterCumRank = document.getElementById(`ru_after_cum_rank_${seat}`);
+    const totalRow = document.getElementById(`ru_total_row_${seat}`);
+    if (cumEl)        cumEl.style.display        = 'none';
+    if (cumRankEl)    cumRankEl.style.display    = 'none';
+    if (afterCum)     afterCum.style.display     = 'none';
+    if (afterCumRank) afterCumRank.style.display = 'none';
+    if (totalRow)     totalRow.style.display     = 'none';
+  });
+
   buildRuUserOptions();
   updateRankUpRanks();
   getOyaKo();
@@ -1620,18 +1798,117 @@ function updateRankUpRanks() {
   const pts = {};
   SEATS.forEach(s => { pts[s] = parseInt(document.getElementById(`ru_pts_${s}`)?.value || 0) || 0; });
   const rankMap    = calcRankMap(pts);
-  const rankColors = {1:'#c8a000', 2:'#2e86c1', 3:'#c87941', 4:'#922b21'};
+  const rankColors = {1:'#1565C0', 2:'#32cd32', 3:'#ff8c00', 4:'#ff0000'};
+  const rankSuffix = {1:'1st', 2:'2nd', 3:'3rd', 4:'4th'};
+
+  const isCumOn = document.getElementById('ru_cumulative')?.checked;
+
+  // ① 現持ち点から獲得ptsを計算
+  const nowPtsCalc = calcPtsFromLastPoints(pts);
+  // ② 獲得pts着順（獲得ptsで並べる）
+  const nowPtsMap = {};
+  SEATS.forEach(s => { nowPtsMap[s] = nowPtsCalc[s].pts; });
+  const nowPtsRankMap = calcPtsRankMap(nowPtsMap);
+
+  // ③④ 累計合計pts・着順（累計加味ONのみ）
+  let cumTotalMap = null, cumTotalRankMap = null;
+  if (isCumOn) {
+    cumTotalMap = {};
+    const baseCum = getSeatCumPts();
+    SEATS.forEach(s => {
+      cumTotalMap[s] = Math.round((baseCum[s] + nowPtsCalc[s].pts) * 10) / 10;
+    });
+    cumTotalRankMap = calcCumRankMap(cumTotalMap);
+  }
+
+  // 累計pts加味モード：着順UP/DOWN条件の判断基準のみ累計合計pts順位を使う
+  // ru_rank（持ち点表示）は常に持ち点ベース
+  let displayRankMap = rankMap;
+  if (isCumOn) {
+    displayRankMap = cumTotalRankMap;
+  }
+
+  // 今までの累計pts（前セッションまで）の着順
+  let baseCumRankMap = null;
+  if (isCumOn) {
+    const baseCumPtsMap = getSeatCumPts(); // {seat: float}
+    baseCumRankMap = calcPtsRankMap(baseCumPtsMap);
+  }
+
   SEATS.forEach(s => {
+    // ru_rank：常に持ち点による着順を表示
     const el = document.getElementById(`ru_rank_${s}`);
     if (el) { el.textContent = `${rankMap[s]}着`; el.style.color = rankColors[rankMap[s]] || '#888'; }
+    // 着順UP/DOWN条件ラベルは displayRankMap（累計加味時は累計合計pts順位）
     for (let t = 1; t <= 4; t++) {
       const lbl = document.getElementById(`ru-rank-label-${s}-${t}`);
-      if (lbl) lbl.textContent = `${rankMap[s]}着→${t}着`;
+      if (!lbl) continue;
+      if (isCumOn) {
+        lbl.textContent = `${rankSuffix[displayRankMap[s]]}→${rankSuffix[t]}`;
+      } else {
+        lbl.textContent = `${displayRankMap[s]}着→${t}着`;
+      }
     }
-    updateRuConditionContent(s, rankMap[s]);
+
+    // ① 獲得pts
+    const nowPtsEl = document.getElementById(`ru_now_pts_${s}`);
+    if (nowPtsEl) {
+      const v = nowPtsCalc[s].pts;
+      nowPtsEl.textContent = '(' + (v >= 0 ? '+' : '') + v.toFixed(1) + 'pts)';
+    }
+    // ② 獲得pts着順
+    const nowRankEl = document.getElementById(`ru_now_rank_${s}`);
+    if (nowRankEl) {
+      const r = nowPtsRankMap[s];
+      nowRankEl.textContent = rankSuffix[r] || '';
+      nowRankEl.style.color = rankColors[r] || '#888';
+    }
+
+    // 累計pts加味ONの場合の表示
+    const cumEl  = document.getElementById(`ru_cum_pts_${s}`);
+    const totalRow  = document.getElementById(`ru_total_row_${s}`);
+    const totalPtsEl  = document.getElementById(`ru_total_pts_${s}`);
+    const totalRankEl = document.getElementById(`ru_total_rank_${s}`);
+
+    if (isCumOn) {
+      // 既存の累計pts（前セッションまで）を更新
+      if (cumEl) {
+        const seatUserMap = getRuSeatUserMap();
+        const uid = seatUserMap[s];
+        const val = uid ? (CUM_PTS[uid] || 0) : 0;
+        cumEl.textContent = (val >= 0 ? '+' : '') + val.toFixed(1) + '';
+        cumEl.style.display = 'inline';
+      }
+      // 累計pts着順
+      const cumRankEl = document.getElementById(`ru_cum_rank_${s}`);
+      if (cumRankEl && baseCumRankMap) {
+        const r = baseCumRankMap[s];
+        cumRankEl.textContent = rankSuffix[r] || '';
+        cumRankEl.style.color = rankColors[r] || '#888';
+        cumRankEl.style.display = 'inline';
+      }
+      // ③ 累計合計pts
+      if (totalRow)  totalRow.style.display  = 'block';
+      if (totalPtsEl && cumTotalMap) {
+        const v = cumTotalMap[s];
+        totalPtsEl.textContent = (v >= 0 ? '+' : '') + v.toFixed(1) + '';
+      }
+      // ④ 累計着順
+      if (totalRankEl && cumTotalRankMap) {
+        const r = cumTotalRankMap[s];
+        totalRankEl.textContent = rankSuffix[r] || '';
+        totalRankEl.style.color = rankColors[r] || '#888';
+      }
+    } else {
+      if (cumEl)    cumEl.style.display    = 'none';
+      if (totalRow) totalRow.style.display = 'none';
+      const cumRankEl = document.getElementById(`ru_cum_rank_${s}`);
+      if (cumRankEl) cumRankEl.style.display = 'none';
+    }
+
+    updateRuConditionContent(s, displayRankMap[s]);
   });
   updateRuAfterCalc();
-
 }
 
 /* ── 計算ロジック ── */
@@ -1737,7 +2014,7 @@ function calcHoujuuCondition(houjuuSeat, agariSeat, targetRank, state) {
 }
 
 function updateRuAfterCalc() {
-  const rankColors = {1:'#c8a000', 2:'#2e86c1', 3:'#c87941', 4:'#922b21'};
+  const rankColors = {1:'#1565C0', 2:'#32cd32', 3:'#ff8c00', 4:'#ff0000'};
   const state  = getRuBaseState();
   let afterPts = { ...state.pts };
 
@@ -1759,18 +2036,58 @@ function updateRuAfterCalc() {
     }
   }
 
+  const isCumOn = document.getElementById('ru_cumulative')?.checked;
   const rm = calcRankMap(afterPts);
+  // 累計pts加味モード用
+  const cumAfter   = isCumOn ? calcCumPtsAfter(afterPts) : null;
+  const cumRankMap = isCumOn ? calcCumRankMap(cumAfter)  : null;
+  // ⑤ 累計pts着順（cumAfterのptsで順位付け）
+  const cumPtsRankMap = (isCumOn && cumAfter) ? calcPtsRankMap(cumAfter) : null;
+  const rankSuffix = {1:'1st', 2:'2nd', 3:'3rd', 4:'4th'};
+
+  // 計算後持ち点から獲得ptsを算出
+  const afterPtsCalc = calcPtsFromLastPoints(afterPts);
+
   SEATS.forEach(s => {
-    const ar = document.getElementById(`ru_after_rank_${s}`);
-    const ap = document.getElementById(`ru_after_pts_${s}`);
-    if (ar) { ar.textContent = rm[s] + '着'; ar.style.color = rankColors[rm[s]] || '#888'; }
-    if (ap) ap.textContent = afterPts[s].toLocaleString() + '点';
+    const ar   = document.getElementById(`ru_after_rank_${s}`);
+    const ap   = document.getElementById(`ru_after_pts_${s}`);
+    const anp  = document.getElementById(`ru_after_now_pts_${s}`);
+    const acp  = document.getElementById(`ru_after_cum_pts_${s}`);
+    const acr  = document.getElementById(`ru_after_cum_rank_${s}`);
+    if (ar)  { ar.textContent = rm[s] + '着'; ar.style.color = rankColors[rm[s]] || '#888'; }
+    if (ap)  ap.textContent = afterPts[s].toLocaleString() + '点';
+    // 計算後獲得pts（常時表示）
+    if (anp) {
+      const v = afterPtsCalc[s].pts;
+      anp.textContent = '(' + (v >= 0 ? '+' : '') + v.toFixed(1) + 'pts)';
+    }
+    if (acp) {
+      if (isCumOn && cumAfter) {
+        const val = cumAfter[s];
+        acp.textContent = (val >= 0 ? '+' : '') + val.toFixed(1) + '';
+        acp.style.display = 'inline';
+      } else {
+        acp.style.display = 'none';
+      }
+    }
+    // ⑤ 累計pts着順
+    if (acr) {
+      if (isCumOn && cumPtsRankMap) {
+        const r = cumPtsRankMap[s];
+        acr.textContent = rankSuffix[r] || '';
+        acr.style.color = rankColors[r] || '#888';
+        acr.style.display = 'inline';
+      } else {
+        acr.style.display = 'none';
+      }
+    }
   });
 }
 
 function updateRuConditionContent(seat, currentRank) {
-  const ready = isRuStateReady();
-  const state = ready ? getRuBaseState() : null;
+  const ready   = isRuStateReady();
+  const state   = ready ? getRuBaseState() : null;
+  const isCumOn = document.getElementById('ru_cumulative')?.checked;
 
   for (let t = 1; t <= 4; t++) {
     const contentEl = document.getElementById(`ru-rank-content-${seat}-${t}`);
@@ -1800,7 +2117,9 @@ function updateRuConditionContent(seat, currentRank) {
 
     if (t < currentRank) {
       // 着順UP：ツモ条件・ロン条件
-      const tsumo = ready ? calcTsumoCondition(seat, t, state) : '—';
+      const tsumo = ready
+        ? (isCumOn ? calcCumTsumoCondition(seat, t, state) : calcTsumoCondition(seat, t, state))
+        : '—';
       let html = `<div style="margin-bottom:8px">
         <div class="ru-label" style="margin-bottom:3px;color:#1565c0">ツモ条件</div>
         <input type="text" readonly value="${tsumo}" style="width:100%;padding:4px 6px;border:1px solid #bbdefb;border-radius:3px;font-size:12px;background:#e3f2fd;font-weight:700;color:#1565c0">
@@ -1808,7 +2127,9 @@ function updateRuConditionContent(seat, currentRank) {
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">`;
       otherSeats.forEach(hs => {
         const n   = document.getElementById(`ru_name_${hs}`)?.textContent || hs;
-        const ron = ready ? calcRonCondition(seat, hs, t, state) : '—';
+        const ron = ready
+          ? (isCumOn ? calcCumRonCondition(seat, hs, t, state) : calcRonCondition(seat, hs, t, state))
+          : '—';
         html += `<div><div style="font-size:11px;color:#1565c0;margin-bottom:2px">${n}から</div>
           <input type="text" readonly value="${ron}" style="width:100%;padding:4px 4px;border:1px solid #bbdefb;border-radius:3px;font-size:11px;background:#e3f2fd;font-weight:700;color:#1565c0"></div>`;
       });
@@ -1821,7 +2142,9 @@ function updateRuConditionContent(seat, currentRank) {
       html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">';
       otherSeats.forEach(as => {
         const n    = document.getElementById(`ru_name_${as}`)?.textContent || as;
-        const cond = ready ? calcHoujuuCondition(seat, as, t, state) : '—';
+        const cond = ready
+          ? (isCumOn ? calcCumHoujuuCondition(seat, as, t, state) : calcHoujuuCondition(seat, as, t, state))
+          : '—';
         const bad  = cond === '放銃不可';
         html += `<div><div style="font-size:11px;color:#b71c1c;margin-bottom:2px">${n}へ</div>
           <input type="text" readonly value="${cond}" style="width:100%;padding:4px 4px;border:1px solid ${bad ? '#e53935' : '#ffcdd2'};border-radius:3px;font-size:11px;background:${bad ? '#ffcdd2' : '#ffebee'};font-weight:700;color:${bad ? '#b71c1c' : '#c62828'}"></div>`;
@@ -1946,6 +2269,312 @@ function getOyaKo () {
       t.style.display = 'block';
     }
   });
+}
+
+/* ══════════════════════════════════════════
+   累計獲得pts加味 機能
+══════════════════════════════════════════ */
+
+/* ── ユーザID→座席マップを取得 ── */
+function getRuUserSeatMap() {
+  const map = {}; // userId -> seat
+  SEATS.forEach(seat => {
+    const ps = document.getElementById('player_' + seat);
+    if (ps && ps.value) map[ps.value] = seat;
+  });
+  return map;
+}
+
+/* ── 座席→ユーザIDマップを取得 ── */
+function getRuSeatUserMap() {
+  const map = {}; // seat -> userId
+  SEATS.forEach(seat => {
+    const ps = document.getElementById('player_' + seat);
+    if (ps && ps.value) map[seat] = ps.value;
+  });
+  return map;
+}
+
+/* ── 持ち点 → pts 計算（JS版 calc_pts_with_rule）── */
+function calcPtsFromLastPoints(lastPoints) {
+  // lastPoints: {east, south, west, north} の持ち点
+  const rule        = RULE;
+  const returnPts   = rule.return_points;
+  const initPts     = rule.init_points;
+  const drawHandling = rule.draw_handling;
+  const umaType     = rule.uma_type;
+
+  // 浮き人数（連盟Aルール用）
+  let floatCount = 0;
+  if (umaType === 'rengo_a') {
+    SEATS.forEach(s => { if (lastPoints[s] >= returnPts) floatCount++; });
+  }
+
+  function getUma(rank) {
+    if (umaType === 'rengo_a') {
+      const table = rule.rengo_a_uma_table;
+      return table[floatCount][rank - 1];
+    }
+    return [rule.uma1, rule.uma2, rule.uma3, rule.uma4][rank - 1];
+  }
+
+  // 起家優先で仮着順
+  const sorted = [...SEATS].sort((a, b) => {
+    if (lastPoints[b] !== lastPoints[a]) return lastPoints[b] - lastPoints[a];
+    return SEATS.indexOf(a) - SEATS.indexOf(b);
+  });
+
+  function basePts(seat, rank) {
+    let p = (lastPoints[seat] - returnPts) / 1000 + getUma(rank);
+    if (umaType !== 'rengo_a' && rank === 1) {
+      p += (returnPts - initPts) * 4 / 1000;
+    }
+    return p;
+  }
+
+  const result = {};
+
+  if (drawHandling === 'east_priority') {
+    sorted.forEach((seat, idx) => {
+      result[seat] = { rank: idx + 1, pts: Math.round(basePts(seat, idx + 1) * 10) / 10 };
+    });
+  } else {
+    // 仮pts
+    const tmp = {};
+    sorted.forEach((seat, idx) => { tmp[seat] = { rank: idx + 1, pts: basePts(seat, idx + 1) }; });
+
+    // 同点グループ
+    const done = new Set();
+    SEATS.forEach(seat => {
+      if (done.has(seat)) return;
+      const same = SEATS.filter(s => lastPoints[s] === lastPoints[seat]);
+      if (same.length === 1) {
+        result[seat] = { rank: tmp[seat].rank, pts: Math.round(tmp[seat].pts * 10) / 10 };
+        done.add(seat);
+        return;
+      }
+      const topRank  = Math.min(...same.map(s => tmp[s].rank));
+      const totalPts = same.reduce((acc, s) => acc + tmp[s].pts, 0);
+      const count    = same.length;
+
+      if (drawHandling === 'split') {
+        const avg = Math.round(totalPts / count * 10) / 10;
+        same.forEach(s => { result[s] = { rank: topRank, pts: avg }; done.add(s); });
+      } else { // split_east
+        // 端数を起家最寄り1人に集約
+        const unit     = 0.1;
+        const quotient = Math.floor(Math.round(totalPts / unit) / count);
+        const remainder = Math.round(totalPts / unit) - quotient * count;
+        const sameSorted = [...same].sort((a, b) => SEATS.indexOf(a) - SEATS.indexOf(b));
+        sameSorted.forEach((s, idx) => {
+          const extra = idx === 0 ? remainder * unit : 0;
+          result[s] = { rank: topRank, pts: Math.round((quotient * unit + extra) * 10) / 10 };
+          done.add(s);
+        });
+      }
+    });
+  }
+  return result; // {seat: {rank, pts}}
+}
+
+/* ── 座席→ユーザID経由で累計ptsを取得 ── */
+function getSeatCumPts() {
+  const seatUserMap = getRuSeatUserMap();
+  const res = {};
+  SEATS.forEach(seat => {
+    const uid = seatUserMap[seat];
+    res[seat] = uid ? (CUM_PTS[uid] || 0) : 0;
+  });
+  return res; // {seat: 既存累計pts}
+}
+
+/* ── 持ち点から累計ptsを計算し、座席ごとの累計合計を返す ── */
+function calcCumPtsAfter(lastPoints) {
+  const baseCum = getSeatCumPts();
+  const ptsCalc = calcPtsFromLastPoints(lastPoints);
+  const result  = {};
+  SEATS.forEach(seat => {
+    result[seat] = Math.round((baseCum[seat] + ptsCalc[seat].pts) * 10) / 10;
+  });
+  return result; // {seat: 累計合計pts}
+}
+
+/* ── 累計pts順位マップを返す（draw_handling=splitで統一） ── */
+function calcCumRankMap(cumPts) {
+  const sorted = [...SEATS].sort((a, b) => {
+    if (cumPts[b] !== cumPts[a]) return cumPts[b] - cumPts[a];
+    return SEATS.indexOf(a) - SEATS.indexOf(b);
+  });
+  const tmp = {};
+  sorted.forEach((s, i) => { tmp[s] = i + 1; });
+
+  const drawHandling = RULE.draw_handling;
+  if (drawHandling === 'east_priority') return tmp;
+
+  // 同着（分け）
+  const rankMap = {};
+  const done    = new Set();
+  SEATS.forEach(seat => {
+    if (done.has(seat)) return;
+    const same = SEATS.filter(s => cumPts[s] === cumPts[seat]);
+    const topRank = Math.min(...same.map(s => tmp[s]));
+    same.forEach(s => { rankMap[s] = topRank; done.add(s); });
+  });
+  return rankMap;
+}
+
+/* ── 累計pts加味での条件計算：状況から計算後lastPointsを作りcalcCumPtsAfterを呼ぶ ── */
+
+function calcCumTsumoCondition(agariSeat, targetRank, state) {
+  const isOya  = agariSeat === state.oyaSeat;
+  const ptsArr = getWinPtsList(isOya, false);
+
+  const ranges = [];
+  let rangeStart = null;
+
+  for (let i = 0; i < ptsArr.length; i++) {
+    const wp = ptsArr[i];
+    const after    = calcAfterPts({ ...state.pts }, agariSeat, null, wp,
+                                   state.honba, state.kyotaku, state.riichi, state.oyaSeat);
+    const cumAfter = calcCumPtsAfter(after);
+    const qualifies = calcCumRankMap(cumAfter)[agariSeat] <= targetRank;
+
+    if (qualifies && rangeStart === null) {
+      rangeStart = wp;
+    } else if (!qualifies && rangeStart !== null) {
+      const prev = ptsArr[i - 1];
+      if (rangeStart === prev) ranges.push(`${rangeStart}`);
+      else                     ranges.push(`${rangeStart}以上${prev}以下`);
+      rangeStart = null;
+    }
+  }
+  // ループ終了後に残っている = 最大点まで連続して条件を満たす → 「以上」のみ
+  if (rangeStart !== null) ranges.push(`${rangeStart}以上`);
+  return ranges.length ? ranges.join('、') : '条件なし';
+}
+
+function calcCumRonCondition(agariSeat, houjuuSeat, targetRank, state) {
+  const isOya  = agariSeat === state.oyaSeat;
+  const ptsArr = getWinPtsList(isOya, true);
+
+  const ranges = [];
+  let rangeStart = null;
+
+  for (let i = 0; i < ptsArr.length; i++) {
+    const wp = ptsArr[i];
+    const after    = calcAfterPts({ ...state.pts }, agariSeat, houjuuSeat, wp,
+                                   state.honba, state.kyotaku, state.riichi, state.oyaSeat);
+    const cumAfter = calcCumPtsAfter(after);
+    const qualifies = calcCumRankMap(cumAfter)[agariSeat] <= targetRank;
+
+    if (qualifies && rangeStart === null) {
+      rangeStart = wp;
+    } else if (!qualifies && rangeStart !== null) {
+      const prev = ptsArr[i - 1];
+      if (rangeStart === prev) ranges.push(`${rangeStart}`);
+      else                     ranges.push(`${rangeStart}以上${prev}以下`);
+      rangeStart = null;
+    }
+  }
+  // ループ終了後に残っている = 最大点まで連続して条件を満たす → 「以上」のみ
+  if (rangeStart !== null) ranges.push(`${rangeStart}以上`);
+  return ranges.length ? ranges.join('、') : '条件なし';
+}
+
+function calcCumHoujuuCondition(houjuuSeat, agariSeat, targetRank, state) {
+  const isOya  = agariSeat === state.oyaSeat;
+  const ptsArr = getWinPtsList(isOya, true);
+
+  // targetRank以下に落ちる = houjuuSeat の累計ランクが targetRank より悪くなる
+  // 「制限なし」「放銃不可」「○○まで / ○○以上○○まで」を列挙
+  const safeRanges = []; // 放銃しても問題ない範囲
+  let safeStart = null;
+
+  for (let i = 0; i <= ptsArr.length; i++) {
+    const wp = ptsArr[i];
+    let isSafe = false;
+    if (i < ptsArr.length) {
+      const after   = calcAfterPts({ ...state.pts }, agariSeat, houjuuSeat, wp,
+                                    state.honba, state.kyotaku, state.riichi, state.oyaSeat);
+      const cumAfter = calcCumPtsAfter(after);
+      // targetRankより悪くならないなら safe
+      isSafe = calcCumRankMap(cumAfter)[houjuuSeat] < targetRank;
+    }
+    if (isSafe && safeStart === null) {
+      safeStart = wp;
+    } else if (!isSafe && safeStart !== null) {
+      const prev = ptsArr[i - 1];
+      if (safeStart === prev) {
+        // 1点のみ安全
+        const startIdx = ptsArr.indexOf(safeStart);
+        if (startIdx === 0) safeRanges.push(`${prev}まで`);  // リスト先頭の1点 = 「○○まで」
+        else                safeRanges.push(`${prev}`);       // 中間・末尾の1点 = 点数のみ
+      } else {
+        const startIdx = ptsArr.indexOf(safeStart);
+        if (startIdx === 0) safeRanges.push(`${prev}まで`);
+        else                safeRanges.push(`${safeStart}以上${prev}まで`);
+      }
+      safeStart = null;
+    }
+  }
+  if (safeStart !== null) {
+    const startIdx = ptsArr.indexOf(safeStart);
+    const last     = ptsArr[ptsArr.length - 1];
+    if (startIdx === 0) return '制限なし';
+    if (safeStart === last) safeRanges.push(`${last}`);           // 最大点の1点のみ安全
+    else                    safeRanges.push(`${safeStart}以上${last}まで`);
+  }
+
+  if (safeRanges.length === 0) return '放銃不可';
+  // safeRanges の先頭が「○○まで」（最小から連続）かつ単一 → 「○○まで」
+  return safeRanges.join('、');
+}
+
+/* ── 獲得pts → 順位マップ（draw_handling に準拠）── */
+function calcPtsRankMap(ptsMap) {
+  // ptsMap: {seat: float pts}
+  const drawHandling = RULE.draw_handling || DRAW_HANDLING;
+  const sorted = [...SEATS].sort((a, b) => {
+    if (ptsMap[b] !== ptsMap[a]) return ptsMap[b] - ptsMap[a];
+    return SEATS.indexOf(a) - SEATS.indexOf(b);
+  });
+  const tmp = {};
+  sorted.forEach((s, i) => { tmp[s] = i + 1; });
+  if (drawHandling === 'east_priority') return tmp;
+  // 同着（分け）
+  const rankMap = {};
+  const done = new Set();
+  SEATS.forEach(seat => {
+    if (done.has(seat)) return;
+    const same = SEATS.filter(s => ptsMap[s] === ptsMap[seat]);
+    const topRank = Math.min(...same.map(s => tmp[s]));
+    same.forEach(s => { rankMap[s] = topRank; done.add(s); });
+  });
+  return rankMap;
+}
+
+/* ── チェックボックス ON/OFF ── */
+function onRuCumulativeChange() {
+  const isOn = document.getElementById('ru_cumulative').checked;
+
+  // ① 状況設定エリアの累計pts表示
+  SEATS.forEach(seat => {
+    const el = document.getElementById(`ru_cum_pts_${seat}`);
+    if (!el) return;
+    if (isOn) {
+      const seatUserMap = getRuSeatUserMap();
+      const uid = seatUserMap[seat];
+      const val = uid ? (CUM_PTS[uid] || 0) : 0;
+      el.textContent = (val >= 0 ? '+' : '') + val.toFixed(1) + '';
+      el.style.display = 'block';
+    } else {
+      el.style.display = 'none';
+    }
+  });
+
+  // ② 計算後獲得pts表示・条件再計算
+  updateRuAfterCalc();
+  updateRankUpRanks();
 }
 
 window.addEventListener('DOMContentLoaded', () => {

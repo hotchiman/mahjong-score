@@ -87,13 +87,19 @@
           <!-- ヘッダ行 -->
           <div class="sess-header">
             <div class="sess-header-left">
-              <a href="{% url 'session_edit' room.id sess.id %}" class="sess-title-link">
+              {% if can_edit %}
+              <a href="{% url 'session_result_edit' room.id sess.id %}" class="sess-title-link">
                 対局{{ sess.session_number }}
               </a>
+              {% else %}
+              <span class="sess-title-plain">
+                対局{{ sess.session_number }}
+              </span>
+              {% endif %}
               <span class="sess-date">{{ sess.game_date }}</span>
-              {% if can_edit and sess.is_finalized %}
-              <a href="{% url 'session_result_edit' room.id sess.id %}"
+              <a href="{% url 'session_edit' room.id sess.id %}"
                  class="btn-sess-edit" onclick="event.stopPropagation()">編集</a>
+              {% if can_edit and sess.is_finalized %}
               <a href="{% url 'session_result_delete' room.id sess.id %}"
                  class="btn-sess-del" onclick="event.stopPropagation()">削除</a>
               {% endif %}
@@ -250,6 +256,9 @@
   transition:border-color 0.15s;
 }
 .sess-title-link:hover { border-color:var(--teal); color:var(--teal); }
+.sess-title-plain {
+  font-weight:700; font-size:14px; color:var(--ink);
+}
 .sess-date { font-family:var(--mono); font-size:12px; color:var(--ink-muted); }
 .btn-sess-edit {
   font-size:11px; padding:2px 10px;
