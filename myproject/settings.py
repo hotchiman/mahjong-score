@@ -10,6 +10,9 @@ DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = ['*']  # Renderのドメインを受け入れる
 
+# POSTするフォーム項目数の上限
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
